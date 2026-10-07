@@ -28,7 +28,40 @@ class Siswa extends Model
         'telepon_wali',
         'alamat',
         'status',
+        'kategori_spp',
+        'diskon_tipe',
+        'diskon_nilai',
+        'catatan_keringanan',
     ];
+
+    protected $casts = [
+        'diskon_nilai' => 'float',
+    ];
+
+    /**
+     * Hitung nominal SPP akhir setelah memperhitungkan beasiswa/keringanan siswa
+     */
+    public function hitungNominalSetelahDiskon(float $nominalDasar): float
+    {
+        if ($this->kategori_spp === 'yatim') {
+            return 0; // Gratis 100% untuk anak yatim piatu
+        }
+
+        if ($this->diskon_nilai <= 0) {
+            return $nominalDasar;
+        }
+
+        if ($this->diskon_tipe === 'persen') {
+            $potongan = $nominalDasar * ($this->diskon_nilai / 100);
+            return max(0, $nominalDasar - $potongan);
+        }
+
+        if ($this->diskon_tipe === 'nominal') {
+            return max(0, $nominalDasar - $this->diskon_nilai);
+        }
+
+        return $nominalDasar;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

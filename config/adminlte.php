@@ -870,6 +870,12 @@ return [
             'icon' => 'bi bi-calendar3',
             'can'  => 'tahun-ajaran.view',
         ],
+        [
+            'text' => 'Kenaikan & Kelulusan',
+            'url'  => 'kelas/kenaikan-kelas',
+            'icon' => 'bi bi-arrow-up-right-square-fill',
+            'can'  => 'kelas.view',
+        ],
 
         // 4. MENU MONITORING & LAPORAN (Kepsek & Yayasan)
         [
@@ -1116,7 +1122,7 @@ return [
             ],
         ],
         'Sweetalert2' => [
-            'active' => false,
+            'active' => true,
             'files' => [
                 [
                     'type' => 'js',

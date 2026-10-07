@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Siswa;
 use App\Models\Kelas;
 use App\Models\UnitSekolah;
+use App\Http\Requests\StoreSiswaRequest;
+use App\Http\Requests\UpdateSiswaRequest;
+use App\Services\SiswaImportService;
 use Illuminate\Http\Request;
 
 class SiswaController extends Controller
@@ -12,7 +15,7 @@ class SiswaController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = Siswa::with(['unitSekolah', 'kelas']);
+        $query = Siswa::with(['unitSekolah', 'kelas.jurusan']);
 
         // Scope by unit
         if (!$user->isYayasan() && $user->unit_sekolah_id) {
@@ -60,6 +63,14 @@ class SiswaController extends Controller
                     $jurusan = ($row->kelas && $row->kelas->jurusan) ? ' <span class="badge bg-success-subtle text-success border">' . e($row->kelas->jurusan->kode_jurusan) . '</span>' : '';
                     return '<strong>' . e($row->kelas?->nama_kelas ?? '-') . '</strong>' . $jurusan;
                 })
+                ->addColumn('kategori_badge', function ($row) {
+                    return match($row->kategori_spp) {
+                        'beasiswa' => '<span class="badge bg-warning text-dark"><i class="bi bi-award-fill me-1"></i>Beasiswa ' . ($row->diskon_tipe === 'persen' ? $row->diskon_nilai . '%' : 'Rp ' . number_format($row->diskon_nilai, 0, ',', '.')) . '</span>',
+                        'yatim' => '<span class="badge bg-info text-white"><i class="bi bi-heart-fill me-1"></i>Yatim (100%)</span>',
+                        'keringanan' => '<span class="badge bg-secondary"><i class="bi bi-percent me-1"></i>Keringanan</span>',
+                        default => '<span class="badge bg-light text-muted border">Reguler</span>'
+                    };
+                })
                 ->addColumn('status_badge', function ($row) {
                     $badge = match($row->status) {
                         'aktif' => 'success',
@@ -88,7 +99,7 @@ class SiswaController extends Controller
                         </div>
                     ';
                 })
-                ->rawColumns(['unit_name', 'kelas_name', 'status_badge', 'action'])
+                ->rawColumns(['unit_name', 'kelas_name', 'kategori_badge', 'status_badge', 'action'])
                 ->make(true);
         }
 
@@ -118,20 +129,9 @@ class SiswaController extends Controller
         return view('siswas.create', compact('units', 'kelasList'));
     }
 
-    public function store(Request $request)
+    public function store(StoreSiswaRequest $request)
     {
-        $validated = $request->validate([
-            'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
-            'kelas_id' => 'required|exists:kelas,id',
-            'nis' => 'required|string|max:30',
-            'nisn' => 'nullable|string|max:30',
-            'nama' => 'required|string|max:150',
-            'jenis_kelamin' => 'required|in:L,P',
-            'nama_wali' => 'nullable|string|max:150',
-            'telepon_wali' => 'nullable|string|max:30',
-            'alamat' => 'nullable|string',
-            'status' => 'required|in:aktif,lulus,pindah',
-        ]);
+        $validated = $request->validated();
 
         // Check unique NIS in unit
         $exists = Siswa::where('unit_sekolah_id', $validated['unit_sekolah_id'])
@@ -151,7 +151,7 @@ class SiswaController extends Controller
     {
         $siswa->load([
             'unitSekolah',
-            'kelas',
+            'kelas.jurusan',
             'tagihans.tahunAjaran',
             'pembayarans.petugas'
         ]);
@@ -171,20 +171,9 @@ class SiswaController extends Controller
         return view('siswas.edit', compact('siswa', 'units', 'kelasList'));
     }
 
-    public function update(Request $request, Siswa $siswa)
+    public function update(UpdateSiswaRequest $request, Siswa $siswa)
     {
-        $validated = $request->validate([
-            'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
-            'kelas_id' => 'required|exists:kelas,id',
-            'nis' => 'required|string|max:30',
-            'nisn' => 'nullable|string|max:30',
-            'nama' => 'required|string|max:150',
-            'jenis_kelamin' => 'required|in:L,P',
-            'nama_wali' => 'nullable|string|max:150',
-            'telepon_wali' => 'nullable|string|max:30',
-            'alamat' => 'nullable|string',
-            'status' => 'required|in:aktif,lulus,pindah',
-        ]);
+        $validated = $request->validated();
 
         // Check unique NIS in unit excluding this student
         $exists = Siswa::where('unit_sekolah_id', $validated['unit_sekolah_id'])
@@ -206,4 +195,46 @@ class SiswaController extends Controller
         $siswa->delete();
         return redirect()->route('siswas.index')->with('success', 'Data siswa berhasil dihapus (Soft Delete).');
     }
+
+    /**
+     * Download template import siswa Excel
+     */
+    public function downloadTemplate(Request $request, SiswaImportService $importService)
+    {
+        $user = auth()->user();
+        $unitId = (!$user->isYayasan() && $user->unit_sekolah_id) ? $user->unit_sekolah_id : ($request->unit_id ?? UnitSekolah::first()?->id);
+        $unit = UnitSekolah::findOrFail($unitId);
+
+        return $importService->generateTemplate($unit);
+    }
+
+    /**
+     * Import siswa dari file Excel
+     */
+    public function importExcel(Request $request, SiswaImportService $importService)
+    {
+        $request->validate([
+            'file_excel' => 'required|file|mimes:xlsx,xls|max:5120',
+            'unit_id' => 'required|exists:unit_sekolahs,id',
+            'kelas_id' => 'nullable|exists:kelas,id',
+        ]);
+
+        $result = $importService->import(
+            $request->file('file_excel'),
+            (int)$request->unit_id,
+            $request->kelas_id ? (int)$request->kelas_id : null
+        );
+
+        if (!$result['success']) {
+            return redirect()->route('siswas.index')->with('error', $result['errors'][0] ?? 'Gagal mengimpor file Excel.');
+        }
+
+        $msg = "Import berhasil: {$result['imported']} siswa baru ditambahkan, {$result['updated']} diperbarui.";
+        if ($result['failed'] > 0) {
+            $msg .= " ({$result['failed']} baris dilewati karena format tidak sesuai).";
+        }
+
+        return redirect()->route('siswas.index')->with('success', $msg);
+    }
 }
+

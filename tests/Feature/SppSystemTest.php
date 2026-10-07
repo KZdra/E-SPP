@@ -9,6 +9,7 @@ use App\Models\Tagihan;
 use App\Models\UnitSekolah;
 use App\Models\Pembayaran;
 use App\Models\TahunAjaran;
+use App\Models\Kelas;
 use App\Services\PaymentService;
 use App\Services\BillingGeneratorService;
 use Spatie\Activitylog\Models\Activity;
@@ -229,5 +230,123 @@ class SppSystemTest extends TestCase
         $response->assertStatus(200);
         $this->assertStringContainsString('spreadsheetml.sheet', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('.xlsx', $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_download_siswa_excel_template(): void
+    {
+        $tu = User::where('username', 'tu.sma')->first();
+
+        $response = $this->actingAs($tu)->get('/siswas/download-template');
+        $response->assertStatus(200);
+        $this->assertStringContainsString('spreadsheetml.sheet', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('Template_Import_Siswa', $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_scholarship_discount_in_billing_generator(): void
+    {
+        $smaUnit = UnitSekolah::where('kode_unit', 'SMA')->first();
+        $ta = TahunAjaran::where('is_active', true)->first();
+        $kelas = Kelas::where('unit_sekolah_id', $smaUnit->id)->first();
+
+        // Create student with 50% scholarship
+        $siswaBeasiswa = Siswa::create([
+            'unit_sekolah_id' => $smaUnit->id,
+            'kelas_id' => $kelas->id,
+            'nis' => 'TEST-SCH-01',
+            'nama' => 'Siswa Beasiswa 50%',
+            'jenis_kelamin' => 'L',
+            'status' => 'aktif',
+            'kategori_spp' => 'beasiswa',
+            'diskon_tipe' => 'persen',
+            'diskon_nilai' => 50,
+        ]);
+
+        // Create student with Yatim (100% free)
+        $siswaYatim = Siswa::create([
+            'unit_sekolah_id' => $smaUnit->id,
+            'kelas_id' => $kelas->id,
+            'nis' => 'TEST-SCH-02',
+            'nama' => 'Siswa Yatim Piatu',
+            'jenis_kelamin' => 'P',
+            'status' => 'aktif',
+            'kategori_spp' => 'yatim',
+            'diskon_tipe' => 'persen',
+            'diskon_nilai' => 100,
+        ]);
+
+        $service = app(BillingGeneratorService::class);
+        $service->generateMonthlyBilling([
+            'unit_sekolah_id' => $smaUnit->id,
+            'tahun_ajaran_id' => $ta->id,
+            'bulan' => 11,
+            'tahun' => 2026,
+            'nominal_default' => 250000,
+        ]);
+
+        $billBeasiswa = Tagihan::where('siswa_id', $siswaBeasiswa->id)
+            ->where('bulan', 11)->where('tahun', 2026)->first();
+        $billYatim = Tagihan::where('siswa_id', $siswaYatim->id)
+            ->where('bulan', 11)->where('tahun', 2026)->first();
+
+        $this->assertNotNull($billBeasiswa);
+        $this->assertEquals(125000, (int)$billBeasiswa->nominal); // 50% of 250,000
+
+        $this->assertNotNull($billYatim);
+        $this->assertEquals(0, (int)$billYatim->nominal); // 0 (Free)
+        $this->assertEquals('lunas', $billYatim->status);
+    }
+
+    public function test_kenaikan_kelas_and_kelulusan_flow(): void
+    {
+        $tu = User::where('username', 'tu.sma')->first();
+        $smaUnit = UnitSekolah::where('kode_unit', 'SMA')->first();
+        $kelasAsal = Kelas::where('unit_sekolah_id', $smaUnit->id)->first();
+        $kelasTujuan = Kelas::create([
+            'unit_sekolah_id' => $smaUnit->id,
+            'nama_kelas' => 'XI MIPA 99',
+            'tingkat' => '11',
+        ]);
+
+        $siswa = Siswa::create([
+            'unit_sekolah_id' => $smaUnit->id,
+            'kelas_id' => $kelasAsal->id,
+            'nis' => 'TEST-NAIK-01',
+            'nama' => 'Siswa Siap Naik Kelas',
+            'jenis_kelamin' => 'L',
+            'status' => 'aktif',
+        ]);
+
+        // Process promotion
+        $response = $this->actingAs($tu)->post('/kelas/kenaikan-kelas', [
+            'unit_sekolah_id' => $smaUnit->id,
+            'kelas_asal_id' => $kelasAsal->id,
+            'aksi' => 'naik_kelas',
+            'kelas_tujuan_id' => $kelasTujuan->id,
+            'siswa_ids' => [$siswa->id],
+        ]);
+
+        $response->assertRedirect();
+        $siswa->refresh();
+        $this->assertEquals($kelasTujuan->id, $siswa->kelas_id);
+
+        // Process graduation
+        $responseGrad = $this->actingAs($tu)->post('/kelas/kenaikan-kelas', [
+            'unit_sekolah_id' => $smaUnit->id,
+            'kelas_asal_id' => $kelasTujuan->id,
+            'aksi' => 'lulus',
+            'siswa_ids' => [$siswa->id],
+        ]);
+
+        $responseGrad->assertRedirect();
+        $siswa->refresh();
+        $this->assertEquals('lulus', $siswa->status);
+    }
+
+    public function test_artisan_spp_generate_monthly_command(): void
+    {
+        $this->artisan('spp:generate-monthly', [
+            '--month' => 12,
+            '--year' => 2026,
+        ])->assertExitCode(0);
     }
 }

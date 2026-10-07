@@ -104,7 +104,20 @@ class TagihanController extends Controller
                 })
                 ->addColumn('action', function ($row) {
                     $editUrl = route('tagihans.edit', $row->id);
-                    return '<a href="' . $editUrl . '" class="btn btn-sm btn-outline-warning" title="Edit Tagihan"><i class="bi bi-pencil"></i></a>';
+                    $waBtn = '';
+                    $telp = $row->siswa?->telepon_wali;
+                    if ($telp && $row->status !== 'lunas') {
+                        $cleanTelp = preg_replace('/[^0-9]/', '', $telp);
+                        if (str_starts_with($cleanTelp, '0')) {
+                            $cleanTelp = '62' . substr($cleanTelp, 1);
+                        }
+                        $sisa = number_format($row->nominal - $row->nominal_terbayar, 0, ',', '.');
+                        $namaSiswa = $row->siswa?->nama ?? 'Siswa';
+                        $text = rawurlencode("Assalamu'alaikum Wr. Wb. Yth. Bapak/Ibu Wali dari {$namaSiswa},\n\nKami menginformasikan tagihan SPP periode {$row->nama_bulan} {$row->tahun} sebesar Rp {$sisa} belum terselesaikan. Mohon untuk melakukan penyelesaian administrasi di kantor TU Sekolah.\n\nTerima kasih.");
+                        $waUrl = "https://wa.me/{$cleanTelp}?text={$text}";
+                        $waBtn = '<a href="' . $waUrl . '" target="_blank" class="btn btn-outline-success" title="Kirim Pengingat WhatsApp"><i class="bi bi-whatsapp"></i></a>';
+                    }
+                    return '<div class="btn-group btn-group-sm">' . $waBtn . '<a href="' . $editUrl . '" class="btn btn-outline-warning" title="Edit Tagihan"><i class="bi bi-pencil"></i></a></div>';
                 })
                 ->rawColumns(['periode', 'siswa_info', 'sisa_format', 'status_badge', 'action'])
                 ->make(true);

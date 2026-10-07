@@ -5,17 +5,28 @@
 @section('content_header_subtitle', 'Akademik & Kesiswaan (Remote Server-Side DataTables)')
 
 @section('content_header_actions')
-    @can('siswa.create')
-        <a href="{{ route('siswas.create') }}" class="btn btn-primary shadow-sm">
-            <i class="bi bi-person-plus me-1"></i> Tambah Siswa Baru
-        </a>
-    @endcan
+    <div class="d-flex gap-2">
+        @can('siswa.create')
+            <button type="button" class="btn btn-outline-success shadow-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modal-import-siswa">
+                <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
+            </button>
+            <a href="{{ route('siswas.create') }}" class="btn btn-primary shadow-sm fw-semibold">
+                <i class="bi bi-person-plus me-1"></i> Tambah Siswa Baru
+            </a>
+        @endcan
+    </div>
 @stop
 
 @section('content_body')
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
             <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
@@ -74,6 +85,7 @@
                             <th>Nama Siswa</th>
                             <th>Unit Sekolah</th>
                             <th>Kelas & Jurusan</th>
+                            <th class="text-center">Kategori SPP</th>
                             <th class="text-center">L/P</th>
                             <th>Wali Murid</th>
                             <th class="text-center">Status</th>
@@ -82,6 +94,57 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Import Excel Siswa --}}
+    <div class="modal fade" id="modal-import-siswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form action="{{ route('siswas.import-excel') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="modalImportSiswaLabel">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Import Siswa dari Excel (.xlsx)
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-info border-0 small mb-3">
+                            <i class="bi bi-info-circle-fill me-1"></i> 
+                            Gunakan template Excel resmi agar format kolom (NIS, Nama, Kelas) terbaca sempurna oleh sistem.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pilih Unit Sekolah <span class="text-danger">*</span></label>
+                            <select name="unit_id" id="import-unit-id" class="form-select" required>
+                                @foreach($units as $u)
+                                    <option value="{{ $u->id }}">{{ $u->nama_unit }} ({{ $u->kode_unit }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">File Excel (.xlsx / .xls) <span class="text-danger">*</span></label>
+                            <input type="file" name="file_excel" class="form-control" accept=".xlsx,.xls" required>
+                            <div class="form-text">Maksimal ukuran file: 5 MB</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <a href="{{ route('siswas.download-template') }}" id="btn-download-template" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download me-1"></i> Download Template (.xlsx)
+                            </a>
+                            <span class="small text-muted">Contoh data disertakan</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success fw-semibold">
+                            <i class="bi bi-cloud-arrow-up me-1"></i> Mulai Proses Import
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -107,6 +170,7 @@
                 { data: 'nama', name: 'nama', defaultContent: '-' },
                 { data: 'unit_name', name: 'unit_name', defaultContent: '-' },
                 { data: 'kelas_name', name: 'kelas_name', defaultContent: '-' },
+                { data: 'kategori_badge', name: 'kategori_spp', className: 'text-center', defaultContent: '-' },
                 { data: 'jenis_kelamin', name: 'jenis_kelamin', className: 'text-center', defaultContent: '-' },
                 { data: 'nama_wali', name: 'nama_wali', defaultContent: '-' },
                 { data: 'status_badge', name: 'status', className: 'text-center', defaultContent: '-' },
@@ -137,6 +201,13 @@
             $('#filter-kelas').val('');
             $('#filter-status').val('');
             table.draw();
+        });
+
+        // Update download template link based on selected unit
+        $('#import-unit-id').on('change', function() {
+            let unitId = $(this).val();
+            let base = "{{ route('siswas.download-template', [], false) }}";
+            $('#btn-download-template').attr('href', base + '?unit_id=' + unitId);
         });
     });
 </script>

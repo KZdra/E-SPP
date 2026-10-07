@@ -7,6 +7,7 @@ use App\Models\Siswa;
 use App\Models\Tagihan;
 use App\Models\UnitSekolah;
 use App\Services\PaymentService;
+use App\Http\Requests\ProcessPaymentRequest;
 use Illuminate\Http\Request;
 
 class PembayaranController extends Controller
@@ -193,19 +194,9 @@ class PembayaranController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(ProcessPaymentRequest $request)
     {
-        $validated = $request->validate([
-            'siswa_id' => 'required|exists:siswas,id',
-            'tgl_bayar' => 'required|date',
-            'metode_bayar' => 'required|in:tunai,transfer',
-            'bank_tujuan' => 'nullable|string|max:50',
-            'nomor_referensi' => 'nullable|string|max:100',
-            'catatan' => 'nullable|string',
-            'tagihan_ids' => 'required|array|min:1',
-            'tagihan_ids.*' => 'exists:tagihans,id',
-        ]);
-
+        $validated = $request->validated();
         $validated['user_id'] = auth()->id();
 
         try {

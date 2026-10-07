@@ -98,3 +98,35 @@
     }
 </style>
 @endpush
+
+{{-- SweetAlert2 Notification Integration --}}
+@push('js')
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        @if(session('success'))
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: {!! json_encode(session('success')) !!},
+                    timer: 3500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+        @endif
+
+        @if(session('error'))
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Perhatian!',
+                    text: {!! json_encode(session('error')) !!},
+                    confirmButtonColor: '#0d6efd',
+                });
+            }
+        @endif
+    });
+</script>
+@endpush

@@ -14,6 +14,7 @@ use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\TagihanController;
 use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\KenaikanKelasController;
 
 Auth::routes(['register' => false]);
 
@@ -46,11 +47,15 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware(['permission:kelas.view'])->group(function () {
+        Route::get('kelas/kenaikan-kelas', [KenaikanKelasController::class, 'index'])->name('kenaikan-kelas.index');
+        Route::post('kelas/kenaikan-kelas', [KenaikanKelasController::class, 'process'])->name('kenaikan-kelas.process');
         Route::resource('jurusans', JurusanController::class);
         Route::resource('kelas', KelasController::class);
     });
 
     Route::middleware(['permission:siswa.view'])->group(function () {
+        Route::get('siswas/download-template', [SiswaController::class, 'downloadTemplate'])->name('siswas.download-template');
+        Route::post('siswas/import-excel', [SiswaController::class, 'importExcel'])->name('siswas.import-excel');
         Route::resource('siswas', SiswaController::class);
     });
 

@@ -92,15 +92,19 @@ class BillingGeneratorService
                     $nominal = $defaultTariff;
                 }
 
+                // Perhitungkan beasiswa / diskon khusus siswa jika ada
+                $finalNominal = $siswa->hitungNominalSetelahDiskon((float)$nominal);
+                $status = ($finalNominal <= 0) ? 'lunas' : 'belum_lunas';
+
                 Tagihan::create([
                     'unit_sekolah_id' => $unitId,
                     'siswa_id' => $siswa->id,
                     'tahun_ajaran_id' => $tahunAjaranId,
                     'bulan' => $bulan,
                     'tahun' => $tahun,
-                    'nominal' => $nominal,
+                    'nominal' => $finalNominal,
                     'nominal_terbayar' => 0,
-                    'status' => 'belum_lunas',
+                    'status' => $status,
                     'jatuh_tempo' => $jatuhTempo->format('Y-m-d'),
                 ]);
 
