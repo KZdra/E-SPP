@@ -17,12 +17,17 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
+                                <label class="form-label fw-semibold">Username Login <span class="text-danger">*</span></label>
+                                <input type="text" name="username" class="form-control" value="{{ old('username', $user->username) }}" required>
+                                <small class="text-muted">Gunakan huruf kecil, angka, titik, atau garis bawah tanpa spasi.</small>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nama Lengkap & Gelar <span class="text-danger">*</span></label>
                                 <input type="text" name="name" class="form-control" value="{{ old('name', $user->name) }}" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Alamat Email (Login) <span class="text-danger">*</span></label>
-                                <input type="email" name="email" class="form-control" value="{{ old('email', $user->email) }}" required>
+                                <label class="form-label fw-semibold">Alamat Email (Opsional)</label>
+                                <input type="email" name="email" class="form-control" value="{{ old('email', $user->email) }}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Role / Hak Akses <span class="text-danger">*</span></label>

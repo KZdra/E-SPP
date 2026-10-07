@@ -54,6 +54,7 @@ class InitialDataSeeder extends Seeder
         // Yayasan Admin (Super Admin - Global across all units)
         $userYayasan = User::create([
             'unit_sekolah_id' => null,
+            'username' => 'yayasan',
             'name' => 'Drs. H. M. Fauzi (Yayasan)',
             'email' => 'yayasan@sekolah.sch.id',
             'phone' => '081234567890',
@@ -65,6 +66,7 @@ class InitialDataSeeder extends Seeder
         // SMA Staff
         $kepsekSma = User::create([
             'unit_sekolah_id' => $unitSma->id,
+            'username' => 'kepsek.sma',
             'name' => 'Dr. H. Ahmad Santoso, M.Pd (Kepsek SMA)',
             'email' => 'kepsek.sma@sekolah.sch.id',
             'phone' => '081298765431',
@@ -75,6 +77,7 @@ class InitialDataSeeder extends Seeder
 
         $tuSma = User::create([
             'unit_sekolah_id' => $unitSma->id,
+            'username' => 'tu.sma',
             'name' => 'Siti Rahmawati, S.E (Bendahara SMA)',
             'email' => 'tu.sma@sekolah.sch.id',
             'phone' => '081298765432',
@@ -86,6 +89,7 @@ class InitialDataSeeder extends Seeder
         // SMP Staff
         $kepsekSmp = User::create([
             'unit_sekolah_id' => $unitSmp->id,
+            'username' => 'kepsek.smp',
             'name' => 'Bambang Sudarsono, M.Pd (Kepsek SMP)',
             'email' => 'kepsek.smp@sekolah.sch.id',
             'phone' => '081298765433',
@@ -96,6 +100,7 @@ class InitialDataSeeder extends Seeder
 
         $tuSmp = User::create([
             'unit_sekolah_id' => $unitSmp->id,
+            'username' => 'tu.smp',
             'name' => 'Dewi Anggraini, A.Md (Bendahara SMP)',
             'email' => 'tu.smp@sekolah.sch.id',
             'phone' => '081298765434',
@@ -107,6 +112,7 @@ class InitialDataSeeder extends Seeder
         // SD Staff
         $kepsekSd = User::create([
             'unit_sekolah_id' => $unitSd->id,
+            'username' => 'kepsek.sd',
             'name' => 'Hj. Nurul Hidayati, S.Pd (Kepsek SD)',
             'email' => 'kepsek.sd@sekolah.sch.id',
             'phone' => '081298765435',
@@ -117,6 +123,7 @@ class InitialDataSeeder extends Seeder
 
         $tuSd = User::create([
             'unit_sekolah_id' => $unitSd->id,
+            'username' => 'tu.sd',
             'name' => 'Rina Marlina, S.Ak (Bendahara SD)',
             'email' => 'tu.sd@sekolah.sch.id',
             'phone' => '081298765436',

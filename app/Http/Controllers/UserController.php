@@ -29,8 +29,9 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'username' => 'required|string|max:50|alpha_dash|unique:users,username',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => 'nullable|email|max:255|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
             'phone' => 'nullable|string|max:30',
             'unit_sekolah_id' => 'nullable|exists:unit_sekolahs,id',
@@ -39,8 +40,9 @@ class UserController extends Controller
         ]);
 
         $user = User::create([
+            'username' => strtolower($validated['username']),
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'unit_sekolah_id' => $validated['role'] === 'Admin Yayasan' ? null : $validated['unit_sekolah_id'],
             'password' => Hash::make($validated['password']),
@@ -49,7 +51,7 @@ class UserController extends Controller
 
         $user->assignRole($validated['role']);
 
-        return redirect()->route('users.index')->with('success', "Pengguna {$user->name} berhasil ditambahkan.");
+        return redirect()->route('users.index')->with('success', "Pengguna {$user->name} ({$user->username}) berhasil ditambahkan.");
     }
 
     public function edit(User $user)
@@ -62,8 +64,9 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
+            'username' => 'required|string|max:50|alpha_dash|unique:users,username,' . $user->id,
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6|confirmed',
             'phone' => 'nullable|string|max:30',
             'unit_sekolah_id' => 'nullable|exists:unit_sekolahs,id',
@@ -72,8 +75,9 @@ class UserController extends Controller
         ]);
 
         $data = [
+            'username' => strtolower($validated['username']),
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'unit_sekolah_id' => $validated['role'] === 'Admin Yayasan' ? null : $validated['unit_sekolah_id'],
             'status_aktif' => $request->has('status_aktif'),

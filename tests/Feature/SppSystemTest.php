@@ -22,9 +22,20 @@ class SppSystemTest extends TestCase
         $response->assertRedirect('/login');
     }
 
+    public function test_user_can_login_using_username(): void
+    {
+        $response = $this->post('/login', [
+            'username' => 'yayasan',
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/home');
+        $this->assertAuthenticated();
+    }
+
     public function test_yayasan_admin_can_access_executive_dashboard_and_management_menus(): void
     {
-        $yayasan = User::where('email', 'yayasan@sekolah.sch.id')->first();
+        $yayasan = User::where('username', 'yayasan')->first();
         $this->assertNotNull($yayasan);
 
         $response = $this->actingAs($yayasan)->get('/');
@@ -47,7 +58,7 @@ class SppSystemTest extends TestCase
 
     public function test_kepala_sekolah_can_access_monitoring_but_cannot_access_unit_management(): void
     {
-        $kepsek = User::where('email', 'kepsek.sma@sekolah.sch.id')->first();
+        $kepsek = User::where('username', 'kepsek.sma')->first();
         $this->assertNotNull($kepsek);
 
         // Can access dashboard
@@ -69,7 +80,7 @@ class SppSystemTest extends TestCase
 
     public function test_tu_can_access_kasir_and_process_payment_atomically(): void
     {
-        $tu = User::where('email', 'tu.sma@sekolah.sch.id')->first();
+        $tu = User::where('username', 'tu.sma')->first();
         $this->assertNotNull($tu);
 
         // Can access kasir
@@ -100,7 +111,7 @@ class SppSystemTest extends TestCase
 
     public function test_billing_generator_is_idempotent(): void
     {
-        $tu = User::where('email', 'tu.sma@sekolah.sch.id')->first();
+        $tu = User::where('username', 'tu.sma')->first();
         $unit = UnitSekolah::where('kode_unit', 'SMA')->first();
         $ta = TahunAjaran::where('unit_sekolah_id', $unit->id)->first();
 
@@ -132,7 +143,7 @@ class SppSystemTest extends TestCase
 
     public function test_void_payment_reverses_bill_and_records_audit(): void
     {
-        $tu = User::where('email', 'tu.sma@sekolah.sch.id')->first();
+        $tu = User::where('username', 'tu.sma')->first();
         $payment = Pembayaran::with('details.tagihan')->latest('id')->first();
         $this->assertNotNull($payment);
 
@@ -152,7 +163,7 @@ class SppSystemTest extends TestCase
 
     public function test_reports_pages_render_successfully(): void
     {
-        $yayasan = User::where('email', 'yayasan@sekolah.sch.id')->first();
+        $yayasan = User::where('username', 'yayasan')->first();
 
         $this->actingAs($yayasan)->get('/reports/realisasi-kas')->assertStatus(200);
         $this->actingAs($yayasan)->get('/reports/tunggakan')->assertStatus(200);

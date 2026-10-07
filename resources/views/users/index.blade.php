@@ -20,7 +20,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr class="small text-muted text-uppercase">
-                            <th>Nama & Email</th>
+                            <th>Username & Nama</th>
                             <th>Role / Hak Akses</th>
                             <th>Penugasan Unit</th>
                             <th>Kontak Telepon</th>
@@ -36,7 +36,8 @@
                                         <img src="{{ $u->adminlte_image() }}" alt="{{ $u->name }}" class="rounded-circle me-2" width="36" height="36">
                                         <div>
                                             <div class="fw-bold text-body-secondary">{{ $u->name }}</div>
-                                            <small class="text-muted">{{ $u->email }}</small>
+                                            <span class="badge bg-light text-primary border font-monospace me-1">{{ $u->username }}</span>
+                                            <small class="text-muted">{{ $u->email ?? '-' }}</small>
                                         </div>
                                     </div>
                                 </td>
