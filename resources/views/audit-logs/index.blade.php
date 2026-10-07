@@ -2,93 +2,106 @@
 
 @section('subtitle', 'Audit Trail Log')
 @section('content_header_title', 'Audit Trail Log Aktivitas')
-@section('content_header_subtitle', 'Sistem Keamanan & Transparansi')
+@section('content_header_subtitle', 'Sistem Keamanan & Transparansi (Remote Server-Side DataTables)')
 
 @section('content_body')
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-transparent border-0 pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="fw-bold mb-0 text-body-secondary"><i class="bi bi-shield-lock-fill text-danger me-2"></i>Rekam Jejak Transaksi & Data (Audit Log)</h5>
-            <form method="GET" action="{{ route('audit-logs.index') }}" class="d-flex align-items-center gap-2">
-                <select name="log_name" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Semua Kategori Log</option>
-                    @foreach($logTypes as $lt)
-                        <option value="{{ $lt }}" {{ request('log_name') == $lt ? 'selected' : '' }}>
-                            {{ ucfirst($lt) }}
-                        </option>
-                    @endforeach
-                </select>
-            </form>
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-muted mb-1">Filter Kategori Log:</label>
+                    <select id="filter-log-name" class="form-select form-select-sm">
+                        <option value="">Semua Kategori Log</option>
+                        @foreach($logTypes as $lt)
+                            <option value="{{ $lt }}">{{ ucfirst($lt) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-muted mb-1">Aksi (Event):</label>
+                    <select id="filter-event" class="form-select form-select-sm">
+                        <option value="">Semua Aksi</option>
+                        <option value="created">Created</option>
+                        <option value="updated">Updated</option>
+                        <option value="deleted">Deleted</option>
+                    </select>
+                </div>
+                <div class="col-md-4 text-end d-flex align-items-end justify-content-end">
+                    <button type="button" id="btn-reset-filter" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 font-monospace" style="font-size: 0.875rem;">
+                <table id="table-audit" class="table table-hover table-striped align-middle w-100" style="font-size: 0.9rem;">
                     <thead class="table-light">
-                        <tr class="small text-muted text-uppercase font-sans-serif">
+                        <tr class="small text-muted text-uppercase">
+                            <th class="text-center" width="5%">No</th>
                             <th>Waktu & Tanggal</th>
                             <th>Pengguna (Actor)</th>
-                            <th>Modul / Log</th>
-                            <th>Aksi (Event)</th>
+                            <th class="text-center">Modul / Log</th>
+                            <th class="text-center">Aksi (Event)</th>
                             <th>Deskripsi Aktivitas</th>
-                            <th>Rincian Perubahan (Properties)</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($logs as $log)
-                            <tr>
-                                <td class="text-nowrap text-muted">
-                                    {{ $log->created_at->format('d/m/Y H:i:s') }}
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ $log->causer->name ?? 'System' }}</div>
-                                    <small class="text-muted">{{ $log->causer->email ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary-subtle text-secondary border">
-                                        {{ $log->log_name }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @php
-                                        $badgeEvent = match($log->event) {
-                                            'created' => 'bg-success',
-                                            'updated' => 'bg-warning text-dark',
-                                            'deleted' => 'bg-danger',
-                                            default => 'bg-info text-white'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeEvent }}">
-                                        {{ $log->event ?? 'action' }}
-                                    </span>
-                                </td>
-                                <td class="font-sans-serif">
-                                    {{ $log->description }}
-                                </td>
-                                <td>
-                                    @if($log->properties && $log->properties->count() > 0)
-                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#prop-{{ $log->id }}">
-                                            <i class="bi bi-code-slash"></i> JSON Data
-                                        </button>
-                                        <div class="collapse mt-2" id="prop-{{ $log->id }}">
-                                            <pre class="bg-dark text-light p-2 rounded small mb-0" style="max-width: 320px; max-height: 150px; overflow: auto;">{{ json_encode($log->properties, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
-                                        </div>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted font-sans-serif">Belum ada riwayat aktivitas yang tercatat.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
-        @if($logs->hasPages())
-            <div class="card-footer bg-transparent py-3">
-                {{ $logs->links() }}
-            </div>
-        @endif
     </div>
 @stop
+
+@push('js')
+<script>
+    $(document).ready(function() {
+        let table = $('#table-audit').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('audit-logs.index', [], false) }}",
+                data: function (d) {
+                    d.log_name = $('#filter-log-name').val();
+                    d.event = $('#filter-event').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+                { data: 'tgl_format', name: 'created_at', className: 'text-nowrap', defaultContent: '-' },
+                { data: 'user_name', name: 'user_name', defaultContent: '-' },
+                { data: 'log_badge', name: 'log_name', className: 'text-center', defaultContent: '-' },
+                { data: 'event_badge', name: 'event', className: 'text-center', defaultContent: '-' },
+                { data: 'description_text', name: 'description', defaultContent: '-' },
+            ],
+            language: {
+                search: "Pencarian:",
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Memuat audit trail...',
+                lengthMenu: "Tampilkan _MENU_ log",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ log",
+                infoEmpty: "Menampilkan 0 log",
+                infoFiltered: "(disaring dari _MAX_ data)",
+                paginate: {
+                    first: "Awal",
+                    last: "Akhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        });
+
+        $('#filter-log-name, #filter-event').on('change', function() {
+            table.draw();
+        });
+
+        $('#btn-reset-filter').on('click', function() {
+            $('#filter-log-name').val('');
+            $('#filter-event').val('');
+            table.draw();
+        });
+    });
+</script>
+@endpush

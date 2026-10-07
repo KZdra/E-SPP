@@ -43,8 +43,8 @@ class PembayaranController extends Controller
             $query->where('metode_bayar', $request->metode_bayar);
         }
 
-        // Search invoice or student
-        if ($request->filled('search')) {
+        // Search invoice or student (for non-ajax standard GET requests)
+        if (!$request->ajax() && $request->filled('search') && is_string($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('kode_transaksi', 'like', "%{$search}%")
@@ -53,6 +53,61 @@ class PembayaranController extends Controller
                          ->orWhere('nis', 'like', "%{$search}%");
                   });
             });
+        }
+
+        if ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of($query)
+                ->addIndexColumn()
+                ->filterColumn('siswa_info', function ($q, $keyword) {
+                    $q->whereHas('siswa', function ($sq) use ($keyword) {
+                        $sq->where('nama', 'like', "%{$keyword}%")
+                          ->orWhere('nis', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('kasir_name', function ($q, $keyword) {
+                    $q->whereHas('petugas', function ($pq) use ($keyword) {
+                        $pq->where('name', 'like', "%{$keyword}%");
+                    });
+                })
+                ->addColumn('tgl_format', fn($row) => $row->tgl_bayar ? $row->tgl_bayar->format('d/m/Y') : '-')
+                ->addColumn('siswa_info', function ($row) {
+                    $nama = e($row->siswa?->nama ?? '-');
+                    $nis = e($row->siswa?->nis ?? '-');
+                    $kelas = e($row->siswa?->kelas?->nama_kelas ?? '-');
+                    return "<div><strong class='text-dark'>{$nama}</strong><br><small class='text-muted'>NIS: {$nis} | Kelas: {$kelas}</small></div>";
+                })
+                ->addColumn('metode_badge', function ($row) {
+                    $badge = $row->metode_bayar === 'tunai' ? 'success' : 'primary';
+                    return '<span class="badge bg-' . $badge . '">' . strtoupper($row->metode_bayar) . '</span>';
+                })
+                ->addColumn('total_format', fn($row) => '<strong class="text-success">Rp ' . number_format($row->total_bayar, 0, ',', '.') . '</strong>')
+                ->addColumn('kasir_name', fn($row) => e($row->petugas?->name ?? '-'))
+                ->addColumn('status_badge', function ($row) {
+                    if ($row->status === 'void') {
+                        return '<span class="badge bg-danger">VOID (Batal)</span>';
+                    }
+                    return '<span class="badge bg-success">BERHASIL</span>';
+                })
+                ->addColumn('action', function ($row) {
+                    $detailUrl = route('pembayarans.show', $row->id);
+                    $printUrl = route('pembayarans.kuitansi', $row->id);
+                    $voidBtn = '';
+                    if (auth()->user()->can('pembayaran.void') && $row->status !== 'void') {
+                        $voidUrl = route('pembayarans.void', $row->id);
+                        $csrf = csrf_field();
+                        $voidBtn = '<form action="' . $voidUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Batalkan transaksi ini (VOID)? Tagihan siswa akan dikembalikan ke status belum lunas.\')">
+                            ' . $csrf . '
+                            <button type="submit" class="btn btn-outline-danger" title="Void Pembayaran"><i class="bi bi-x-circle"></i></button>
+                        </form>';
+                    }
+                    return '<div class="btn-group btn-group-sm">
+                        <a href="' . $detailUrl . '" class="btn btn-outline-info" title="Detail"><i class="bi bi-eye"></i></a>
+                        <a href="' . $printUrl . '" target="_blank" class="btn btn-outline-secondary" title="Cetak Kwitansi"><i class="bi bi-printer"></i></a>
+                        ' . $voidBtn . '
+                    </div>';
+                })
+                ->rawColumns(['siswa_info', 'metode_badge', 'total_format', 'status_badge', 'action'])
+                ->make(true);
         }
 
         $pembayarans = $query->orderBy('tgl_bayar', 'desc')
@@ -189,5 +244,39 @@ class PembayaranController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal membatalkan transaksi: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export Riwayat Transaksi to Excel (.xlsx) using PhpSpreadsheet
+     */
+    public function exportExcel(Request $request, \App\Services\ExcelExportService $excelService)
+    {
+        $user = auth()->user();
+        $query = Pembayaran::with(['siswa.kelas', 'petugas', 'unitSekolah']);
+
+        if (!$user->isYayasan() && $user->unit_sekolah_id) {
+            $query->where('unit_sekolah_id', $user->unit_sekolah_id);
+        } elseif ($request->filled('unit_id')) {
+            $query->where('unit_sekolah_id', $request->unit_id);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('tgl_bayar', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('tgl_bayar', '<=', $request->end_date);
+        }
+        if ($request->filled('metode_bayar')) {
+            $query->where('metode_bayar', $request->metode_bayar);
+        }
+
+        $pembayarans = $query->orderBy('tgl_bayar', 'desc')->get();
+        $unit = $request->filled('unit_id') ? UnitSekolah::find($request->unit_id) : null;
+
+        return $excelService->exportRealisasiKas($pembayarans, [
+            'start_date' => $request->start_date ?? date('Y-m-01'),
+            'end_date' => $request->end_date ?? date('Y-m-d'),
+            'unit_name' => $unit?->nama_unit ?? 'Seluruh Unit',
+        ]);
     }
 }

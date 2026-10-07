@@ -2,147 +2,184 @@
 
 @section('subtitle', 'Data Tagihan')
 @section('content_header_title', 'Data Tagihan SPP Siswa')
-@section('content_header_subtitle', 'Operasional & Billing')
+@section('content_header_subtitle', 'Operasional & Billing (Remote Server-Side DataTables & Excel Export)')
 
 @section('content_header_actions')
-    @can('tagihan.generate')
-        <a href="{{ route('tagihans.generate') }}" class="btn btn-success shadow-sm">
-            <i class="bi bi-calendar2-plus me-1"></i> Generate Tagihan Massal
+    <div class="d-flex gap-2">
+        <a href="{{ route('tagihans.excel', request()->all()) }}" id="btn-export-excel" class="btn btn-success shadow-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
         </a>
-    @endcan
+        @can('tagihan.generate')
+            <a href="{{ route('tagihans.generate') }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-calendar2-plus me-1"></i> Generate Tagihan Massal
+            </a>
+        @endcan
+    </div>
 @stop
 
 @section('content_body')
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     {{-- Filter Card --}}
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body p-3">
-            <form method="GET" action="{{ route('tagihans.index') }}" class="row g-2 align-items-center">
+            <div class="row g-2 align-items-center">
                 @if(auth()->user()->isYayasan())
                     <div class="col-md-2">
-                        <select name="unit_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <label class="form-label small text-muted mb-1 fw-bold">Unit Sekolah:</label>
+                        <select id="filter-unit" class="form-select form-select-sm">
                             <option value="">Semua Unit</option>
                             @foreach($units as $u)
-                                <option value="{{ $u->id }}" {{ request('unit_id') == $u->id ? 'selected' : '' }}>
-                                    {{ $u->kode_unit }}
-                                </option>
+                                <option value="{{ $u->id }}">{{ $u->kode_unit }} - {{ $u->nama_unit }}</option>
                             @endforeach
                         </select>
                     </div>
                 @endif
                 <div class="col-md-2">
-                    <select name="bulan" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Bulan:</label>
+                    <select id="filter-bulan" class="form-select form-select-sm">
                         <option value="">Semua Bulan</option>
                         @foreach([1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'] as $num => $nama)
-                            <option value="{{ $num }}" {{ request('bulan') == $num ? 'selected' : '' }}>{{ $nama }}</option>
+                            <option value="{{ $num }}">{{ $nama }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Tahun:</label>
+                    <select id="filter-tahun" class="form-select form-select-sm">
                         <option value="">Semua Tahun</option>
                         @foreach([2025, 2026, 2027] as $thn)
-                            <option value="{{ $thn }}" {{ request('tahun') == $thn ? 'selected' : '' }}>{{ $thn }}</option>
+                            <option value="{{ $thn }}">{{ $thn }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Status Tagihan:</label>
+                    <select id="filter-status" class="form-select form-select-sm">
                         <option value="">Semua Status</option>
-                        <option value="belum_lunas" {{ request('status') == 'belum_lunas' ? 'selected' : '' }}>Belum Lunas</option>
-                        <option value="lunas" {{ request('status') == 'lunas' ? 'selected' : '' }}>Lunas</option>
+                        <option value="belum_lunas">Belum Lunas</option>
+                        <option value="sebagian">Sebagian</option>
+                        <option value="lunas">Lunas</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select name="kelas_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Kelas:</label>
+                    <select id="filter-kelas" class="form-select form-select-sm">
                         <option value="">Semua Kelas</option>
                         @foreach($kelasList as $k)
-                            <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>Kelas {{ $k->nama_kelas }}</option>
+                            <option value="{{ $k->id }}">Kelas {{ $k->nama_kelas }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 ms-auto">
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control" placeholder="Cari siswa..." value="{{ request('search') }}">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
-                    </div>
+                <div class="col-md-2 text-end d-flex align-items-end justify-content-end">
+                    <button type="button" id="btn-reset-filter" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    {{-- Billing Table --}}
+    {{-- Remote Server-Side DataTable --}}
     <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table id="table-tagihan" class="table table-hover table-striped align-middle w-100">
                     <thead class="table-light">
                         <tr class="small text-muted text-uppercase">
-                            <th>Siswa</th>
-                            <th>Unit & Kelas</th>
+                            <th class="text-center" width="5%">No</th>
                             <th>Periode SPP</th>
-                            <th>Tahun Ajaran</th>
-                            <th class="text-end">Nominal Tagihan</th>
+                            <th>Informasi Siswa</th>
+                            <th>Unit Sekolah</th>
+                            <th class="text-end">Nominal</th>
                             <th class="text-end">Terbayar</th>
-                            <th>Jatuh Tempo</th>
-                            <th>Status</th>
-                            <th class="text-center">Aksi</th>
+                            <th class="text-end">Sisa</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center" width="8%">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($tagihans as $t)
-                            <tr>
-                                <td>
-                                    <div class="fw-bold">{{ $t->siswa->nama ?? '-' }}</div>
-                                    <small class="text-muted font-monospace">NIS: {{ $t->siswa->nis ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary-subtle text-primary border me-1">{{ $t->unitSekolah->kode_unit ?? '-' }}</span>
-                                    <small>{{ $t->siswa->kelas->nama_kelas ?? '-' }}</small>
-                                </td>
-                                <td class="fw-semibold text-primary">
-                                    {{ $t->nama_bulan }} {{ $t->tahun }}
-                                </td>
-                                <td><small class="text-muted">{{ $t->tahunAjaran->tahun ?? '-' }}</small></td>
-                                <td class="text-end fw-bold">Rp {{ number_format($t->nominal, 0, ',', '.') }}</td>
-                                <td class="text-end text-success">Rp {{ number_format($t->nominal_terbayar, 0, ',', '.') }}</td>
-                                <td><small class="text-muted">{{ $t->jatuh_tempo ? $t->jatuh_tempo->format('d/m/Y') : '-' }}</small></td>
-                                <td>
-                                    @if($t->status === 'lunas')
-                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Lunas</span>
-                                    @else
-                                        <span class="badge bg-danger"><i class="bi bi-clock me-1"></i> Belum Lunas</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        @if($t->status === 'belum_lunas')
-                                            @can('pembayaran.create')
-                                                <a href="{{ route('pembayarans.create', ['siswa_id' => $t->siswa_id]) }}" class="btn btn-outline-success" title="Bayar Sekarang">
-                                                    <i class="bi bi-credit-card-2-front"></i>
-                                                </a>
-                                            @endcan
-                                            <a href="{{ route('tagihans.edit', $t->id) }}" class="btn btn-outline-warning" title="Ubah Nominal / Diskon">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                        @else
-                                            <span class="text-muted small"><i class="bi bi-check-all text-success"></i> Selesai</span>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">Tidak ada data tagihan ditemukan.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
-        @if($tagihans->hasPages())
-            <div class="card-footer bg-transparent py-3">
-                {{ $tagihans->links() }}
-            </div>
-        @endif
     </div>
 @stop
+
+@push('js')
+<script>
+    $(document).ready(function() {
+        let table = $('#table-tagihan').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('tagihans.index', [], false) }}",
+                data: function (d) {
+                    d.unit_id = $('#filter-unit').val();
+                    d.bulan = $('#filter-bulan').val();
+                    d.tahun = $('#filter-tahun').val();
+                    d.status = $('#filter-status').val();
+                    d.kelas_id = $('#filter-kelas').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+                { data: 'periode', name: 'periode', defaultContent: '-' },
+                { data: 'siswa_info', name: 'siswa_info', defaultContent: '-' },
+                { data: 'unit_name', name: 'unit_name', defaultContent: '-' },
+                { data: 'nominal_format', name: 'nominal', className: 'text-end', defaultContent: '-' },
+                { data: 'terbayar_format', name: 'nominal_terbayar', className: 'text-end text-success', defaultContent: '-' },
+                { data: 'sisa_format', name: 'nominal', className: 'text-end', defaultContent: '-' },
+                { data: 'status_badge', name: 'status', className: 'text-center', defaultContent: '-' },
+                { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+            ],
+            language: {
+                search: "Pencarian:",
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Memuat data tagihan...',
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ tagihan",
+                infoEmpty: "Menampilkan 0 tagihan",
+                infoFiltered: "(disaring dari _MAX_ data)",
+                paginate: {
+                    first: "Awal",
+                    last: "Akhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        });
+
+        function updateExportLink() {
+            let params = new URLSearchParams();
+            if ($('#filter-unit').val()) params.append('unit_id', $('#filter-unit').val());
+            if ($('#filter-bulan').val()) params.append('bulan', $('#filter-bulan').val());
+            if ($('#filter-tahun').val()) params.append('tahun', $('#filter-tahun').val());
+            if ($('#filter-status').val()) params.append('status', $('#filter-status').val());
+            if ($('#filter-kelas').val()) params.append('kelas_id', $('#filter-kelas').val());
+
+            let base = "{{ route('tagihans.excel') }}";
+            let fullUrl = params.toString() ? base + '?' + params.toString() : base;
+            $('#btn-export-excel').attr('href', fullUrl);
+        }
+
+        $('#filter-unit, #filter-bulan, #filter-tahun, #filter-status, #filter-kelas').on('change', function() {
+            table.draw();
+            updateExportLink();
+        });
+
+        $('#btn-reset-filter').on('click', function() {
+            $('#filter-unit').val('');
+            $('#filter-bulan').val('');
+            $('#filter-tahun').val('');
+            $('#filter-status').val('');
+            $('#filter-kelas').val('');
+            table.draw();
+            updateExportLink();
+        });
+    });
+</script>
+@endpush

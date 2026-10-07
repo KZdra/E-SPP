@@ -52,6 +52,11 @@ class UnitSekolah extends Model
         return $this->hasOne(TahunAjaran::class, 'unit_sekolah_id')->where('is_active', true);
     }
 
+    public function jurusans(): HasMany
+    {
+        return $this->hasMany(Jurusan::class, 'unit_sekolah_id');
+    }
+
     public function kelas(): HasMany
     {
         return $this->hasMany(Kelas::class, 'unit_sekolah_id');

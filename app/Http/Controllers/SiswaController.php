@@ -31,14 +31,65 @@ class SiswaController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Search NIS or Name
-        if ($request->filled('search')) {
+        // Search NIS or Name (for non-ajax standard GET requests)
+        if (!$request->ajax() && $request->filled('search') && is_string($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
                   ->orWhere('nis', 'like', "%{$search}%")
                   ->orWhere('nisn', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->ajax()) {
+            return \Yajra\DataTables\Facades\DataTables::of($query)
+                ->addIndexColumn()
+                ->filterColumn('unit_name', function ($q, $keyword) {
+                    $q->whereHas('unitSekolah', function ($uq) use ($keyword) {
+                        $uq->where('nama_unit', 'like', "%{$keyword}%")
+                          ->orWhere('kode_unit', 'like', "%{$keyword}%");
+                    });
+                })
+                ->filterColumn('kelas_name', function ($q, $keyword) {
+                    $q->whereHas('kelas', function ($kq) use ($keyword) {
+                        $kq->where('nama_kelas', 'like', "%{$keyword}%");
+                    });
+                })
+                ->addColumn('unit_name', fn($row) => $row->unitSekolah ? '<span class="badge bg-primary me-1">' . e($row->unitSekolah->kode_unit) . '</span> ' . e($row->unitSekolah->nama_unit) : '-')
+                ->addColumn('kelas_name', function ($row) {
+                    $jurusan = ($row->kelas && $row->kelas->jurusan) ? ' <span class="badge bg-success-subtle text-success border">' . e($row->kelas->jurusan->kode_jurusan) . '</span>' : '';
+                    return '<strong>' . e($row->kelas?->nama_kelas ?? '-') . '</strong>' . $jurusan;
+                })
+                ->addColumn('status_badge', function ($row) {
+                    $badge = match($row->status) {
+                        'aktif' => 'success',
+                        'lulus' => 'primary',
+                        'pindah' => 'danger',
+                        default => 'secondary'
+                    };
+                    return '<span class="badge bg-' . $badge . '">' . ucfirst($row->status) . '</span>';
+                })
+                ->addColumn('action', function ($row) {
+                    $showUrl = route('siswas.show', $row->id);
+                    $editUrl = route('siswas.edit', $row->id);
+                    $deleteUrl = route('siswas.destroy', $row->id);
+                    $csrf = csrf_field();
+                    $method = method_field('DELETE');
+
+                    return '
+                        <div class="btn-group btn-group-sm">
+                            <a href="' . $showUrl . '" class="btn btn-outline-info" title="Detail Siswa"><i class="bi bi-eye"></i></a>
+                            <a href="' . $editUrl . '" class="btn btn-outline-warning" title="Edit Siswa"><i class="bi bi-pencil"></i></a>
+                            <form action="' . $deleteUrl . '" method="POST" onsubmit="return confirm(\'Hapus data siswa ini?\');" class="d-inline">
+                                ' . $csrf . '
+                                ' . $method . '
+                                <button type="submit" class="btn btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    ';
+                })
+                ->rawColumns(['unit_name', 'kelas_name', 'status_badge', 'action'])
+                ->make(true);
         }
 
         $siswas = $query->orderBy('nama')->paginate(15)->withQueryString();

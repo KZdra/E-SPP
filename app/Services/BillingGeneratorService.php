@@ -50,14 +50,14 @@ class BillingGeneratorService
                 $query->where('kelas_id', $kelasId);
             }
 
-            $students = $query->with('kelas')->get();
+            $students = $query->with(['kelas.jurusan'])->get();
 
             // Pre-load tariffs for this academic year & unit
             $tariffs = TarifSpp::where('unit_sekolah_id', $unitId)
                 ->where('tahun_ajaran_id', $tahunAjaranId)
                 ->get();
 
-            $defaultTariff = $tariffs->whereNull('kelas_id')->first()?->nominal
+            $defaultTariff = $tariffs->whereNull('kelas_id')->whereNull('jurusan_id')->first()?->nominal
                 ?? ($params['nominal_default'] ?? 250000);
 
             $createdCount = 0;
@@ -75,9 +75,22 @@ class BillingGeneratorService
                     continue;
                 }
 
-                // Determine student tariff (class-specific or unit default)
+                // Determine student tariff hierarchy:
+                // 1. Specific to Siswa's Kelas ($siswa->kelas_id)
+                // 2. Specific to Siswa's Jurusan (via $siswa->kelas?->jurusan_id)
+                // 3. Default unit tariff (no class, no jurusan)
                 $classTariff = $tariffs->where('kelas_id', $siswa->kelas_id)->first();
-                $nominal = $classTariff ? $classTariff->nominal : $defaultTariff;
+                $jurusanTariff = ($siswa->kelas && $siswa->kelas->jurusan_id)
+                    ? $tariffs->where('jurusan_id', $siswa->kelas->jurusan_id)->whereNull('kelas_id')->first()
+                    : null;
+
+                if ($classTariff) {
+                    $nominal = $classTariff->nominal;
+                } elseif ($jurusanTariff) {
+                    $nominal = $jurusanTariff->nominal;
+                } else {
+                    $nominal = $defaultTariff;
+                }
 
                 Tagihan::create([
                     'unit_sekolah_id' => $unitId,

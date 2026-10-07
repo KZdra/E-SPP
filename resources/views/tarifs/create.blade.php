@@ -38,9 +38,21 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Khusus Kelas (Opsional)</label>
+                                <label class="form-label fw-semibold">Khusus Jurusan SMK (Opsional)</label>
+                                <select name="jurusan_id" class="form-select">
+                                    <option value="">-- Berlaku untuk Semua Jurusan / Non-SMK --</option>
+                                    @foreach($jurusans as $j)
+                                        <option value="{{ $j->id }}" {{ old('jurusan_id') == $j->id ? 'selected' : '' }}>
+                                            Jurusan {{ $j->kode_jurusan }} - {{ $j->nama_jurusan }} ({{ $j->unitSekolah->kode_unit ?? '' }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Untuk SMK: Semua kelas pada jurusan ini akan mengikuti tarif ini.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Khusus Kelas Tertentu (Opsional)</label>
                                 <select name="kelas_id" class="form-select">
-                                    <option value="">-- Berlaku untuk Seluruh Kelas (Umum) --</option>
+                                    <option value="">-- Berlaku untuk Seluruh Kelas --</option>
                                     @foreach($kelas as $k)
                                         <option value="{{ $k->id }}" {{ old('kelas_id') == $k->id ? 'selected' : '' }}>
                                             Kelas {{ $k->nama_kelas }} ({{ $k->unitSekolah->kode_unit ?? '' }})

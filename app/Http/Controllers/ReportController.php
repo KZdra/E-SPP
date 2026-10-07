@@ -125,4 +125,89 @@ class ReportController extends Controller
             'selectedTaId'
         ));
     }
+
+    /**
+     * Export Realisasi Kas to Excel (.xlsx)
+     */
+    public function exportRealisasiKasExcel(Request $request, \App\Services\ExcelExportService $excelService)
+    {
+        $user = auth()->user();
+        $filters = [];
+
+        if (!$user->isYayasan() && $user->unit_sekolah_id) {
+            $filters['unit_sekolah_id'] = $user->unit_sekolah_id;
+        } elseif ($request->filled('unit_id')) {
+            $filters['unit_sekolah_id'] = $request->unit_id;
+        }
+
+        $filters['start_date'] = $request->get('start_date', Carbon::now()->startOfMonth()->toDateString());
+        $filters['end_date'] = $request->get('end_date', Carbon::now()->toDateString());
+
+        if ($request->filled('metode_bayar')) {
+            $filters['metode_bayar'] = $request->metode_bayar;
+        }
+
+        $unit = !empty($filters['unit_sekolah_id']) ? UnitSekolah::find($filters['unit_sekolah_id']) : null;
+        $filters['unit_name'] = $unit ? $unit->nama_unit : 'Seluruh Unit';
+
+        $report = $this->reportService->getRealisasiKas($filters);
+
+        return $excelService->exportRealisasiKas($report['data'], $filters);
+    }
+
+    /**
+     * Export Tunggakan to Excel (.xlsx)
+     */
+    public function exportTunggakanExcel(Request $request, \App\Services\ExcelExportService $excelService)
+    {
+        $user = auth()->user();
+        $filters = [];
+
+        if (!$user->isYayasan() && $user->unit_sekolah_id) {
+            $filters['unit_sekolah_id'] = $user->unit_sekolah_id;
+        } elseif ($request->filled('unit_id')) {
+            $filters['unit_sekolah_id'] = $request->unit_id;
+        }
+
+        if ($request->filled('kelas_id')) {
+            $filters['kelas_id'] = $request->kelas_id;
+            $kelas = Kelas::find($request->kelas_id);
+            $filters['kelas_name'] = $kelas?->nama_kelas;
+        }
+
+        if ($request->filled('tahun_ajaran_id')) {
+            $filters['tahun_ajaran_id'] = $request->tahun_ajaran_id;
+        }
+
+        $unit = !empty($filters['unit_sekolah_id']) ? UnitSekolah::find($filters['unit_sekolah_id']) : null;
+        $filters['unit_name'] = $unit ? $unit->nama_unit : 'Seluruh Unit';
+
+        $report = $this->reportService->getLaporanTunggakan($filters);
+
+        return $excelService->exportTunggakan($report['tagihans'], $filters);
+    }
+
+    /**
+     * Export Matriks Kelas 12 Bulan to Excel (.xlsx)
+     */
+    public function exportMatriksKelasExcel(Request $request, \App\Services\ExcelExportService $excelService)
+    {
+        $user = auth()->user();
+        $unitId = (!$user->isYayasan() && $user->unit_sekolah_id)
+            ? $user->unit_sekolah_id
+            : $request->get('unit_id');
+
+        $kelasId = $request->get('kelas_id');
+        $taId = $request->get('tahun_ajaran_id');
+
+        if (!$kelasId || !$taId) {
+            return back()->with('error', 'Silakan pilih Kelas dan Tahun Ajaran terlebih dahulu untuk ekspor matriks.');
+        }
+
+        $kelas = Kelas::with('unitSekolah')->findOrFail($kelasId);
+        $tahunAjaran = TahunAjaran::findOrFail($taId);
+        $report = $this->reportService->getRekapitulasiMatriksKelas($kelasId, $taId);
+
+        return $excelService->exportMatriksKelas($report, $tahunAjaran, $kelas);
+    }
 }

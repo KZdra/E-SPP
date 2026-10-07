@@ -853,6 +853,12 @@ return [
             'can'  => 'siswa.view',
         ],
         [
+            'text' => 'Jurusan (SMK)',
+            'url'  => 'jurusans',
+            'icon' => 'bi bi-diagram-3-fill',
+            'can'  => 'kelas.view',
+        ],
+        [
             'text' => 'Data Kelas',
             'url'  => 'kelas',
             'icon' => 'bi bi-door-open-fill',
@@ -926,8 +932,13 @@ return [
 
     'plugins' => [
         'Datatables' => [
-            'active' => false,
+            'active' => true,
             'files' => [
+                [
+                    'type' => 'js',
+                    'asset' => false,
+                    'location' => '//code.jquery.com/jquery-3.7.1.min.js',
+                ],
                 [
                     'type' => 'js',
                     'asset' => false,

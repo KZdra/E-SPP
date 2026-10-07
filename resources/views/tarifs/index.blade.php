@@ -48,9 +48,11 @@
                                 <td>{{ $t->tahunAjaran->tahun ?? '-' }} ({{ $t->tahunAjaran->semester ?? '-' }})</td>
                                 <td>
                                     @if($t->kelas)
-                                        <span class="badge bg-info-subtle text-info border">Kelas {{ $t->kelas->nama_kelas }}</span>
+                                        <span class="badge bg-info-subtle text-info border"><i class="bi bi-door-open me-1"></i>Kelas {{ $t->kelas->nama_kelas }}</span>
+                                    @elseif($t->jurusan)
+                                        <span class="badge bg-primary-subtle text-primary border"><i class="bi bi-diagram-3 me-1"></i>Jurusan {{ $t->jurusan->kode_jurusan }}</span>
                                     @else
-                                        <span class="badge bg-success-subtle text-success border">Umum (Seluruh Kelas)</span>
+                                        <span class="badge bg-success-subtle text-success border"><i class="bi bi-check-all me-1"></i>Umum (Seluruh Siswa)</span>
                                     @endif
                                 </td>
                                 <td>

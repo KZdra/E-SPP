@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\UnitSekolah;
 use App\Models\User;
 use App\Models\TahunAjaran;
+use App\Models\Jurusan;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\TarifSpp;
@@ -50,8 +51,18 @@ class InitialDataSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        $unitSmk = UnitSekolah::create([
+            'kode_unit' => 'SMK',
+            'nama_unit' => 'SMK IT Bina Cendekia Informatika & Otomotif',
+            'jenjang' => 'SMK',
+            'alamat' => 'Jl. Pendidikan No. 16, Jakarta Selatan',
+            'telepon' => '021-7890004',
+            'email' => 'smk@sekolah.sch.id',
+            'is_active' => true,
+        ]);
+
         // 2. Create Users with Assigned Roles
-        // Yayasan Admin (Super Admin - Global across all units)
+        // Yayasan Super Admin (Global across all units)
         $userYayasan = User::create([
             'unit_sekolah_id' => null,
             'username' => 'yayasan',
@@ -62,6 +73,29 @@ class InitialDataSeeder extends Seeder
             'status_aktif' => true,
         ]);
         $userYayasan->assignRole('Admin Yayasan');
+
+        // SMK Staff
+        $kepsekSmk = User::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'username' => 'kepsek.smk',
+            'name' => 'Ir. Hendra Gunawan, M.T (Kepsek SMK)',
+            'email' => 'kepsek.smk@sekolah.sch.id',
+            'phone' => '081298765430',
+            'password' => Hash::make('password'),
+            'status_aktif' => true,
+        ]);
+        $kepsekSmk->assignRole('Kepala Sekolah');
+
+        $tuSmk = User::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'username' => 'tu.smk',
+            'name' => 'Bayu Wicaksono, S.Kom (Bendahara TU SMK)',
+            'email' => 'tu.smk@sekolah.sch.id',
+            'phone' => '081298765439',
+            'password' => Hash::make('password'),
+            'status_aktif' => true,
+        ]);
+        $tuSmk->assignRole('Petugas TU');
 
         // SMA Staff
         $kepsekSma = User::create([
@@ -133,6 +167,13 @@ class InitialDataSeeder extends Seeder
         $tuSd->assignRole('Petugas TU');
 
         // 3. Create Academic Year (2026/2027 Ganjil)
+        $taSmk = TahunAjaran::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'tahun' => '2026/2027',
+            'semester' => 'Ganjil',
+            'is_active' => true,
+        ]);
+
         $taSma = TahunAjaran::create([
             'unit_sekolah_id' => $unitSma->id,
             'tahun' => '2026/2027',
@@ -154,7 +195,55 @@ class InitialDataSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 4. Create Classes
+        // 4. Create SMK Departments / Jurusan (Kompetensi Keahlian)
+        $jurusanRpl = Jurusan::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'kode_jurusan' => 'RPL',
+            'nama_jurusan' => 'Rekayasa Perangkat Lunak',
+            'bidang_keahlian' => 'Teknologi Informasi & Komunikasi',
+            'keterangan' => 'Laboratorium Rekayasa Software, Coding, Cloud & Web Dev',
+        ]);
+
+        $jurusanTkj = Jurusan::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'kode_jurusan' => 'TKJ',
+            'nama_jurusan' => 'Teknik Komputer & Jaringan',
+            'bidang_keahlian' => 'Teknologi Informasi & Komunikasi',
+            'keterangan' => 'Laboratorium Mikrotik, Cisco, Server & Fiber Optik',
+        ]);
+
+        $jurusanTkr = Jurusan::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'kode_jurusan' => 'TKR',
+            'nama_jurusan' => 'Teknik Kendaraan Ringan Otomotif',
+            'bidang_keahlian' => 'Teknologi & Rekayasa',
+            'keterangan' => 'Bengkel Praktik Mesin Mobil, Kelistrikan Kendaraan & Tune-up',
+        ]);
+
+        // 5. Create Classes (Link SMK classes to Jurusan)
+        $kelasSmkRpl = Kelas::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'jurusan_id' => $jurusanRpl->id,
+            'nama_kelas' => 'X RPL 1',
+            'tingkat' => '10',
+            'wali_kelas_id' => $tuSmk->id,
+        ]);
+
+        $kelasSmkTkj = Kelas::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'jurusan_id' => $jurusanTkj->id,
+            'nama_kelas' => 'X TKJ 1',
+            'tingkat' => '10',
+        ]);
+
+        $kelasSmkTkr = Kelas::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'jurusan_id' => $jurusanTkr->id,
+            'nama_kelas' => 'X TKR 1',
+            'tingkat' => '10',
+        ]);
+
+        // SMA, SMP, SD classes
         $kelasSma1 = Kelas::create(['unit_sekolah_id' => $unitSma->id, 'nama_kelas' => 'X-MIPA-1', 'tingkat' => '10', 'wali_kelas_id' => $tuSma->id]);
         $kelasSma2 = Kelas::create(['unit_sekolah_id' => $unitSma->id, 'nama_kelas' => 'X-IPS-1', 'tingkat' => '10']);
         $kelasSma3 = Kelas::create(['unit_sekolah_id' => $unitSma->id, 'nama_kelas' => 'XI-MIPA-1', 'tingkat' => '11']);
@@ -165,11 +254,42 @@ class InitialDataSeeder extends Seeder
         $kelasSd1 = Kelas::create(['unit_sekolah_id' => $unitSd->id, 'nama_kelas' => 'I-A', 'tingkat' => '1', 'wali_kelas_id' => $tuSd->id]);
         $kelasSd2 = Kelas::create(['unit_sekolah_id' => $unitSd->id, 'nama_kelas' => 'II-A', 'tingkat' => '2']);
 
-        // 5. Create SPP Tariffs
+        // 6. Create SPP Tariffs with DIFFERENT PRICES PER JURUSAN for SMK
+        // SMK Tariffs:
+        TarifSpp::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'tahun_ajaran_id' => $taSmk->id,
+            'jurusan_id' => $jurusanRpl->id,
+            'kelas_id' => null,
+            'nominal' => 350000,
+            'kategori' => 'reguler',
+            'keterangan' => 'SPP Jurusan Rekayasa Perangkat Lunak (Lab Komputer)',
+        ]);
+
+        TarifSpp::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'tahun_ajaran_id' => $taSmk->id,
+            'jurusan_id' => $jurusanTkj->id,
+            'kelas_id' => null,
+            'nominal' => 375000,
+            'kategori' => 'reguler',
+            'keterangan' => 'SPP Jurusan Teknik Komputer Jaringan (Lab Jaringan & Fiber Optik)',
+        ]);
+
+        TarifSpp::create([
+            'unit_sekolah_id' => $unitSmk->id,
+            'tahun_ajaran_id' => $taSmk->id,
+            'jurusan_id' => $jurusanTkr->id,
+            'kelas_id' => null,
+            'nominal' => 400000,
+            'kategori' => 'reguler',
+            'keterangan' => 'SPP Jurusan Teknik Kendaraan Ringan (Bengkel Mesin & Sparepart)',
+        ]);
+
+        // SMA, SMP, SD Base Tariffs:
         TarifSpp::create([
             'unit_sekolah_id' => $unitSma->id,
             'tahun_ajaran_id' => $taSma->id,
-            'kelas_id' => null,
             'nominal' => 350000,
             'kategori' => 'reguler',
             'keterangan' => 'Tarif Dasar SPP Bulanan SMA Reguler',
@@ -178,7 +298,6 @@ class InitialDataSeeder extends Seeder
         TarifSpp::create([
             'unit_sekolah_id' => $unitSmp->id,
             'tahun_ajaran_id' => $taSmp->id,
-            'kelas_id' => null,
             'nominal' => 250000,
             'kategori' => 'reguler',
             'keterangan' => 'Tarif Dasar SPP Bulanan SMP Reguler',
@@ -187,13 +306,35 @@ class InitialDataSeeder extends Seeder
         TarifSpp::create([
             'unit_sekolah_id' => $unitSd->id,
             'tahun_ajaran_id' => $taSd->id,
-            'kelas_id' => null,
             'nominal' => 180000,
             'kategori' => 'reguler',
             'keterangan' => 'Tarif Dasar SPP Bulanan SD Reguler',
         ]);
 
-        // 6. Create Students
+        // 7. Create Students
+        // SMK Students (1 per Jurusan to prove pricing difference)
+        $studentsSmk = [
+            ['nis' => 'SMK-2601', 'nisn' => '0071234001', 'nama' => 'Rian Hidayat (Siswa RPL)', 'jk' => 'L', 'wali' => 'Hidayat Sutisna', 'telp' => '08129999001', 'kelas_id' => $kelasSmkRpl->id],
+            ['nis' => 'SMK-2602', 'nisn' => '0071234002', 'nama' => 'Syifa Aulia (Siswa TKJ)', 'jk' => 'P', 'wali' => 'Aulia Rahman', 'telp' => '08129999002', 'kelas_id' => $kelasSmkTkj->id],
+            ['nis' => 'SMK-2603', 'nisn' => '0071234003', 'nama' => 'Bagas Kurniawan (Siswa TKR)', 'jk' => 'L', 'wali' => 'Kurniawan Joko', 'telp' => '08129999003', 'kelas_id' => $kelasSmkTkr->id],
+        ];
+
+        foreach ($studentsSmk as $s) {
+            Siswa::create([
+                'unit_sekolah_id' => $unitSmk->id,
+                'kelas_id' => $s['kelas_id'],
+                'nis' => $s['nis'],
+                'nisn' => $s['nisn'],
+                'nama' => $s['nama'],
+                'jenis_kelamin' => $s['jk'],
+                'nama_wali' => $s['wali'],
+                'telepon_wali' => $s['telp'],
+                'alamat' => 'Jl. Kejuruan No. 12',
+                'status' => 'aktif',
+            ]);
+        }
+
+        // SMA, SMP, SD students
         $studentsDataSma = [
             ['nis' => 'SMA-2601', 'nisn' => '0081234001', 'nama' => 'Aditya Pratama Putra', 'jk' => 'L', 'wali' => 'Budi Santoso', 'telp' => '08121111001', 'kelas_id' => $kelasSma1->id],
             ['nis' => 'SMA-2602', 'nisn' => '0081234002', 'nama' => 'Aulia Zahra Nurhaliza', 'jk' => 'P', 'wali' => 'Irwan Nur', 'telp' => '08121111002', 'kelas_id' => $kelasSma1->id],
@@ -259,11 +400,10 @@ class InitialDataSeeder extends Seeder
             ]);
         }
 
-        // 7. Generate Monthly Bills using BillingGeneratorService
+        // 8. Generate Monthly Bills using BillingGeneratorService
         $billingService = app(BillingGeneratorService::class);
         $paymentService = app(PaymentService::class);
 
-        // Generate bills for July, August, September, October 2026
         $monthsToGenerate = [
             ['bulan' => 7, 'tahun' => 2026],
             ['bulan' => 8, 'tahun' => 2026],
@@ -272,6 +412,16 @@ class InitialDataSeeder extends Seeder
         ];
 
         foreach ($monthsToGenerate as $m) {
+            // SMK (will automatically apply different rates: RPL 350k, TKJ 375k, TKR 400k)
+            $billingService->generateMonthlyBilling([
+                'unit_sekolah_id' => $unitSmk->id,
+                'tahun_ajaran_id' => $taSmk->id,
+                'bulan' => $m['bulan'],
+                'tahun' => $m['tahun'],
+                'jatuh_tempo' => "{$m['tahun']}-{$m['bulan']}-10",
+                'user_id' => $tuSmk->id,
+            ]);
+
             // SMA
             $billingService->generateMonthlyBilling([
                 'unit_sekolah_id' => $unitSma->id,
@@ -303,8 +453,25 @@ class InitialDataSeeder extends Seeder
             ]);
         }
 
-        // 8. Simulate Some Payments using PaymentService
-        // Student 1 SMA: Pay July, August, September (3 months) via Transfer
+        // 9. Simulate Payments
+        // SMK: Siswa RPL bayar Juli via Transfer
+        $smkRpl = Siswa::where('nis', 'SMK-2601')->first();
+        if ($smkRpl) {
+            $billSmk = Tagihan::where('siswa_id', $smkRpl->id)->where('bulan', 7)->pluck('id')->toArray();
+            $paymentService->processPayment([
+                'unit_sekolah_id' => $unitSmk->id,
+                'siswa_id' => $smkRpl->id,
+                'user_id' => $tuSmk->id,
+                'tgl_bayar' => '2026-07-12',
+                'metode_bayar' => 'transfer',
+                'bank_tujuan' => 'Mandiri',
+                'nomor_referensi' => 'TRX-MND-9921',
+                'catatan' => 'Pembayaran SPP RPL Juli via Transfer',
+                'tagihan_ids' => $billSmk,
+            ]);
+        }
+
+        // SMA Student 1: Pay July, August, September via Transfer
         $s1 = Siswa::where('nis', 'SMA-2601')->first();
         if ($s1) {
             $billsToPay = Tagihan::where('siswa_id', $s1->id)->whereIn('bulan', [7, 8, 9])->pluck('id')->toArray();
@@ -321,7 +488,7 @@ class InitialDataSeeder extends Seeder
             ]);
         }
 
-        // Student 2 SMA: Pay July (1 month) via Tunai
+        // SMA Student 2: Pay July via Tunai
         $s2 = Siswa::where('nis', 'SMA-2602')->first();
         if ($s2) {
             $billsToPay2 = Tagihan::where('siswa_id', $s2->id)->where('bulan', 7)->pluck('id')->toArray();
@@ -336,7 +503,7 @@ class InitialDataSeeder extends Seeder
             ]);
         }
 
-        // Student 1 SMP: Pay July & August via Tunai
+        // SMP Student 1: Pay July & August via Tunai
         $smp1 = Siswa::where('nis', 'SMP-2601')->first();
         if ($smp1) {
             $billsToPaySmp = Tagihan::where('siswa_id', $smp1->id)->whereIn('bulan', [7, 8])->pluck('id')->toArray();

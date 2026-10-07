@@ -117,22 +117,25 @@ class SppSystemTest extends TestCase
 
         $billingService = app(BillingGeneratorService::class);
 
-        // First run for November 2026
+        // Ensure clean state for test month (December 2026)
+        Tagihan::where('unit_sekolah_id', $unit->id)->where('bulan', 12)->where('tahun', 2026)->forceDelete();
+
+        // First run for December 2026
         $res1 = $billingService->generateMonthlyBilling([
             'unit_sekolah_id' => $unit->id,
             'tahun_ajaran_id' => $ta->id,
-            'bulan' => 11,
+            'bulan' => 12,
             'tahun' => 2026,
             'user_id' => $tu->id,
         ]);
 
         $this->assertGreaterThan(0, $res1['created']);
 
-        // Second run for same November 2026 should create 0 and skip all
+        // Second run for same December 2026 should create 0 and skip all
         $res2 = $billingService->generateMonthlyBilling([
             'unit_sekolah_id' => $unit->id,
             'tahun_ajaran_id' => $ta->id,
-            'bulan' => 11,
+            'bulan' => 12,
             'tahun' => 2026,
             'user_id' => $tu->id,
         ]);
@@ -168,5 +171,63 @@ class SppSystemTest extends TestCase
         $this->actingAs($yayasan)->get('/reports/realisasi-kas')->assertStatus(200);
         $this->actingAs($yayasan)->get('/reports/tunggakan')->assertStatus(200);
         $this->actingAs($yayasan)->get('/reports/matriks-kelas')->assertStatus(200);
+    }
+
+    public function test_smk_students_have_differential_tariffs_by_jurusan(): void
+    {
+        $rplStudent = Siswa::where('nis', 'SMK-2601')->first();
+        $tkjStudent = Siswa::where('nis', 'SMK-2602')->first();
+        $tkrStudent = Siswa::where('nis', 'SMK-2603')->first();
+
+        $this->assertNotNull($rplStudent);
+        $this->assertNotNull($tkjStudent);
+        $this->assertNotNull($tkrStudent);
+
+        $billRpl = Tagihan::where('siswa_id', $rplStudent->id)->where('bulan', 10)->first();
+        $billTkj = Tagihan::where('siswa_id', $tkjStudent->id)->where('bulan', 10)->first();
+        $billTkr = Tagihan::where('siswa_id', $tkrStudent->id)->where('bulan', 10)->first();
+
+        $this->assertEquals(350000, (int)$billRpl->nominal);
+        $this->assertEquals(375000, (int)$billTkj->nominal);
+        $this->assertEquals(400000, (int)$billTkr->nominal);
+    }
+
+    public function test_remote_datatables_ajax_returns_json_for_siswas_and_pembayarans(): void
+    {
+        $tu = User::where('username', 'tu.sma')->first();
+
+        // Test siswas datatable with search payload
+        $dtParams = [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'search' => ['value' => 'SMA', 'regex' => 'false']
+        ];
+        $responseSiswa = $this->actingAs($tu)
+            ->getJson('/siswas?' . http_build_query($dtParams), ['X-Requested-With' => 'XMLHttpRequest']);
+        $responseSiswa->assertStatus(200)
+            ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+
+        // Test tagihans datatable with search payload
+        $responseTagihan = $this->actingAs($tu)
+            ->getJson('/tagihans?' . http_build_query($dtParams), ['X-Requested-With' => 'XMLHttpRequest']);
+        $responseTagihan->assertStatus(200)
+            ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+
+        // Test pembayarans datatable with search payload
+        $responsePembayaran = $this->actingAs($tu)
+            ->getJson('/pembayarans?' . http_build_query($dtParams), ['X-Requested-With' => 'XMLHttpRequest']);
+        $responsePembayaran->assertStatus(200)
+            ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+    }
+
+    public function test_excel_export_using_phpspreadsheet(): void
+    {
+        $yayasan = User::where('username', 'yayasan')->first();
+
+        $response = $this->actingAs($yayasan)->get('/reports/realisasi-kas/export-excel');
+        $response->assertStatus(200);
+        $this->assertStringContainsString('spreadsheetml.sheet', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('.xlsx', $response->headers->get('Content-Disposition'));
     }
 }

@@ -35,6 +35,17 @@
                                 <input type="text" name="tingkat" class="form-control" value="{{ old('tingkat', $kelas->tingkat) }}">
                             </div>
                             <div class="col-12">
+                                <label class="form-label fw-semibold">Jurusan / Program Keahlian (Khusus SMK)</label>
+                                <select name="jurusan_id" class="form-select">
+                                    <option value="">-- Non-Kejuruan / Umum (Tanpa Jurusan) --</option>
+                                    @foreach($jurusans as $j)
+                                        <option value="{{ $j->id }}" {{ old('jurusan_id', $kelas->jurusan_id) == $j->id ? 'selected' : '' }}>
+                                            {{ $j->kode_jurusan }} - {{ $j->nama_jurusan }} ({{ $j->unitSekolah?->kode_unit }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12">
                                 <label class="form-label fw-semibold">Wali Kelas (Guru / Pembina)</label>
                                 <select name="wali_kelas_id" class="form-select">
                                     <option value="">-- Pilih Wali Kelas (Opsional) --</option>

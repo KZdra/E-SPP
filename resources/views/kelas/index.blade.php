@@ -34,6 +34,7 @@
                         <tr class="small text-muted text-uppercase">
                             <th>Unit Sekolah</th>
                             <th>Nama Kelas</th>
+                            <th>Jurusan (SMK)</th>
                             <th>Tingkat</th>
                             <th>Wali Kelas</th>
                             <th>Jumlah Siswa Aktif</th>
@@ -48,6 +49,15 @@
                                     {{ $k->unitSekolah->nama_unit ?? '-' }}
                                 </td>
                                 <td class="fw-bold fs-6">{{ $k->nama_kelas }}</td>
+                                <td>
+                                    @if($k->jurusan)
+                                        <span class="badge bg-success-subtle text-success border">
+                                            <i class="bi bi-diagram-3 me-1"></i>{{ $k->jurusan->kode_jurusan }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted small">-</span>
+                                    @endif
+                                </td>
                                 <td><span class="badge bg-secondary-subtle text-secondary border">Tingkat {{ $k->tingkat ?? '-' }}</span></td>
                                 <td>
                                     @if($k->waliKelas)

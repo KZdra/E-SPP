@@ -11,24 +11,19 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use App\Traits\BelongsToUnit;
 
-class Kelas extends Model
+class Jurusan extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity, BelongsToUnit;
 
-    protected $table = 'kelas';
+    protected $table = 'jurusans';
 
     protected $fillable = [
         'unit_sekolah_id',
-        'jurusan_id',
-        'nama_kelas',
-        'tingkat',
-        'wali_kelas_id',
+        'kode_jurusan',
+        'nama_jurusan',
+        'bidang_keahlian',
+        'keterangan',
     ];
-
-    public function jurusan(): BelongsTo
-    {
-        return $this->belongsTo(Jurusan::class, 'jurusan_id');
-    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -38,23 +33,13 @@ class Kelas extends Model
             ->dontSubmitEmptyLogs();
     }
 
-    public function waliKelas(): BelongsTo
+    public function kelas(): HasMany
     {
-        return $this->belongsTo(User::class, 'wali_kelas_id');
-    }
-
-    public function siswas(): HasMany
-    {
-        return $this->hasMany(Siswa::class, 'kelas_id');
-    }
-
-    public function activeSiswas(): HasMany
-    {
-        return $this->hasMany(Siswa::class, 'kelas_id')->where('status', 'aktif');
+        return $this->hasMany(Kelas::class, 'jurusan_id');
     }
 
     public function tarifSpps(): HasMany
     {
-        return $this->hasMany(TarifSpp::class, 'kelas_id');
+        return $this->hasMany(TarifSpp::class, 'jurusan_id');
     }
 }

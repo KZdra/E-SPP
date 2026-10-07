@@ -37,6 +37,17 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-semibold">Khusus Jurusan SMK (Opsional)</label>
+                                <select name="jurusan_id" class="form-select">
+                                    <option value="">-- Berlaku untuk Semua Jurusan / Non-SMK --</option>
+                                    @foreach($jurusans as $j)
+                                        <option value="{{ $j->id }}" {{ old('jurusan_id', $tarif->jurusan_id) == $j->id ? 'selected' : '' }}>
+                                            Jurusan {{ $j->kode_jurusan }} - {{ $j->nama_jurusan }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Khusus Kelas (Opsional)</label>
                                 <select name="kelas_id" class="form-select">
                                     <option value="">-- Berlaku untuk Seluruh Kelas (Umum) --</option>

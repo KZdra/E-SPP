@@ -28,11 +28,23 @@
                             </div>
                             <div class="col-md-7">
                                 <label class="form-label fw-semibold">Nama Kelas <span class="text-danger">*</span></label>
-                                <input type="text" name="nama_kelas" class="form-control" placeholder="Misal: X-MIPA-1, VII-A, 1-A" value="{{ old('nama_kelas') }}" required>
+                                <input type="text" name="nama_kelas" class="form-control" placeholder="Misal: X-RPL-1, X-TKJ, VII-A" value="{{ old('nama_kelas') }}" required>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold">Tingkat / Grade</label>
                                 <input type="text" name="tingkat" class="form-control" placeholder="Misal: 10, 7, 1" value="{{ old('tingkat') }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Jurusan / Program Keahlian (Khusus SMK)</label>
+                                <select name="jurusan_id" class="form-select">
+                                    <option value="">-- Non-Kejuruan / Umum (Tanpa Jurusan) --</option>
+                                    @foreach($jurusans as $j)
+                                        <option value="{{ $j->id }}" {{ old('jurusan_id') == $j->id ? 'selected' : '' }}>
+                                            {{ $j->kode_jurusan }} - {{ $j->nama_jurusan }} ({{ $j->unitSekolah?->kode_unit }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Untuk SMK, kelas wajib dikaitkan dengan jurusan agar tarif SPP otomatis mengikuti tarif jurusan.</small>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Wali Kelas (Guru / Pembina)</label>

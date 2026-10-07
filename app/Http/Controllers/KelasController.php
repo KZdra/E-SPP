@@ -20,7 +20,7 @@ class KelasController extends Controller
             $query->where('unit_sekolah_id', $request->unit_id);
         }
 
-        $kelas = $query->orderBy('unit_sekolah_id')->orderBy('nama_kelas')->get();
+        $kelas = $query->with('jurusan')->orderBy('unit_sekolah_id')->orderBy('nama_kelas')->get();
         $units = UnitSekolah::where('is_active', true)->get();
 
         return view('kelas.index', compact('kelas', 'units'));
@@ -33,15 +33,20 @@ class KelasController extends Controller
             ? UnitSekolah::where('is_active', true)->get()
             : UnitSekolah::where('id', $user->unit_sekolah_id)->get();
 
+        $jurusans = $user->isYayasan()
+            ? \App\Models\Jurusan::all()
+            : \App\Models\Jurusan::where('unit_sekolah_id', $user->unit_sekolah_id)->get();
+
         $teachers = User::where('status_aktif', true)->get();
 
-        return view('kelas.create', compact('units', 'teachers'));
+        return view('kelas.create', compact('units', 'teachers', 'jurusans'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
+            'jurusan_id' => 'nullable|exists:jurusans,id',
             'nama_kelas' => 'required|string|max:50',
             'tingkat' => 'nullable|string|max:20',
             'wali_kelas_id' => 'nullable|exists:users,id',
@@ -60,9 +65,13 @@ class KelasController extends Controller
             ? UnitSekolah::where('is_active', true)->get()
             : UnitSekolah::where('id', $user->unit_sekolah_id)->get();
 
+        $jurusans = $user->isYayasan()
+            ? \App\Models\Jurusan::all()
+            : \App\Models\Jurusan::where('unit_sekolah_id', $kelas->unit_sekolah_id)->get();
+
         $teachers = User::where('status_aktif', true)->get();
 
-        return view('kelas.edit', compact('kelas', 'units', 'teachers'));
+        return view('kelas.edit', compact('kelas', 'units', 'teachers', 'jurusans'));
     }
 
     public function update(Request $request, Kelas $kela)
@@ -70,6 +79,7 @@ class KelasController extends Controller
         $kelas = $kela;
         $validated = $request->validate([
             'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
+            'jurusan_id' => 'nullable|exists:jurusans,id',
             'nama_kelas' => 'required|string|max:50',
             'tingkat' => 'nullable|string|max:20',
             'wali_kelas_id' => 'nullable|exists:users,id',

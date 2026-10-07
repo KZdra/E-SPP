@@ -11,8 +11,10 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",
+        "phpoffice/phpspreadsheet": "^5.10",
         "spatie/laravel-activitylog": "^4.12",
-        "spatie/laravel-permission": "^6.25"
+        "spatie/laravel-permission": "^6.25",
+        "yajra/laravel-datatables-oracle": "^12.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

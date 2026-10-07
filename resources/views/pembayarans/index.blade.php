@@ -2,132 +2,167 @@
 
 @section('subtitle', 'Riwayat Pembayaran')
 @section('content_header_title', 'Riwayat Transaksi Pembayaran SPP')
-@section('content_header_subtitle', 'Operasional & Kasir')
+@section('content_header_subtitle', 'Operasional & Kasir (Remote Server-Side DataTables & Excel Export)')
 
 @section('content_header_actions')
-    @can('pembayaran.create')
-        <a href="{{ route('pembayarans.create') }}" class="btn btn-primary shadow-sm">
-            <i class="bi bi-credit-card-2-front-fill me-1"></i> Buka Kasir Pembayaran
+    <div class="d-flex gap-2">
+        <a href="{{ route('pembayarans.excel', request()->all()) }}" id="btn-export-excel" class="btn btn-success shadow-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
         </a>
-    @endcan
+        @can('pembayaran.create')
+            <a href="{{ route('pembayarans.create') }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-credit-card-2-front-fill me-1"></i> Buka Kasir Pembayaran
+            </a>
+        @endcan
+    </div>
 @stop
 
 @section('content_body')
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     {{-- Filter Card --}}
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body p-3">
-            <form method="GET" action="{{ route('pembayarans.index') }}" class="row g-2 align-items-center">
+            <div class="row g-2 align-items-center">
                 @if(auth()->user()->isYayasan())
                     <div class="col-md-3">
-                        <select name="unit_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <label class="form-label small text-muted mb-1 fw-bold">Unit Sekolah:</label>
+                        <select id="filter-unit" class="form-select form-select-sm">
                             <option value="">Semua Unit Sekolah</option>
                             @foreach($units as $u)
-                                <option value="{{ $u->id }}" {{ request('unit_id') == $u->id ? 'selected' : '' }}>
-                                    {{ $u->nama_unit }} ({{ $u->kode_unit }})
-                                </option>
+                                <option value="{{ $u->id }}">{{ $u->nama_unit }} ({{ $u->kode_unit }})</option>
                             @endforeach
                         </select>
                     </div>
                 @endif
                 <div class="col-md-2">
-                    <input type="date" name="start_date" class="form-control form-control-sm" placeholder="Dari Tgl" value="{{ request('start_date') }}">
+                    <label class="form-label small text-muted mb-1 fw-bold">Dari Tanggal:</label>
+                    <input type="date" id="filter-start-date" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
-                    <input type="date" name="end_date" class="form-control form-control-sm" placeholder="Sampai Tgl" value="{{ request('end_date') }}">
+                    <label class="form-label small text-muted mb-1 fw-bold">Sampai Tanggal:</label>
+                    <input type="date" id="filter-end-date" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
-                    <select name="metode_bayar" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Metode Bayar:</label>
+                    <select id="filter-metode" class="form-select form-select-sm">
                         <option value="">Semua Metode</option>
-                        <option value="tunai" {{ request('metode_bayar') == 'tunai' ? 'selected' : '' }}>Tunai</option>
-                        <option value="transfer" {{ request('metode_bayar') == 'transfer' ? 'selected' : '' }}>Transfer</option>
+                        <option value="tunai">Tunai</option>
+                        <option value="transfer">Transfer</option>
                     </select>
                 </div>
-                <div class="col-md-3 ms-auto">
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control" placeholder="No. Kuitansi / Nama siswa..." value="{{ request('search') }}">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
-                        @if(request()->hasAny(['unit_id', 'start_date', 'end_date', 'metode_bayar', 'search']))
-                            <a href="{{ route('pembayarans.index') }}" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
-                        @endif
-                    </div>
+                <div class="col-md-3 text-end d-flex align-items-end justify-content-end">
+                    <button type="button" id="btn-reset-filter" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    {{-- Payments Table --}}
+    {{-- Remote Server-Side DataTable --}}
     <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table id="table-pembayaran" class="table table-hover table-striped align-middle w-100">
                     <thead class="table-light">
                         <tr class="small text-muted text-uppercase">
+                            <th class="text-center" width="5%">No</th>
                             <th>No. Kuitansi</th>
-                            <th>Tgl Bayar</th>
-                            <th>Siswa</th>
-                            <th>Unit & Kelas</th>
-                            <th>Rincian Tagihan</th>
-                            <th>Metode</th>
+                            <th class="text-center">Tgl Bayar</th>
+                            <th>Informasi Siswa</th>
+                            <th class="text-center">Metode</th>
                             <th class="text-end">Total Bayar</th>
-                            <th>Petugas TU</th>
-                            <th class="text-center">Aksi</th>
+                            <th>Petugas Kasir</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center" width="12%">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($pembayarans as $p)
-                            <tr>
-                                <td>
-                                    <a href="{{ route('pembayarans.show', $p->id) }}" class="fw-bold font-monospace text-primary text-decoration-none">
-                                        {{ $p->kode_transaksi }}
-                                    </a>
-                                </td>
-                                <td class="text-nowrap">{{ $p->tgl_bayar ? $p->tgl_bayar->format('d/m/Y') : '-' }}</td>
-                                <td>
-                                    <div class="fw-bold">{{ $p->siswa->nama ?? '-' }}</div>
-                                    <small class="text-muted font-monospace">NIS: {{ $p->siswa->nis ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary-subtle text-primary border me-1">{{ $p->unitSekolah->kode_unit ?? '-' }}</span>
-                                    <small>{{ $p->siswa->kelas->nama_kelas ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <small class="text-muted">
-                                        {{ $p->details->map(fn($d) => $d->tagihan ? $d->tagihan->nama_bulan.' '.$d->tagihan->tahun : '')->filter()->implode(', ') }}
-                                    </small>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $p->metode_bayar === 'transfer' ? 'bg-info text-white' : 'bg-success' }} text-uppercase">
-                                        {{ $p->metode_bayar }}
-                                    </span>
-                                </td>
-                                <td class="text-end fw-bold text-success fs-6">
-                                    Rp {{ number_format($p->total_bayar, 0, ',', '.') }}
-                                </td>
-                                <td><small class="text-muted">{{ $p->petugas->name ?? '-' }}</small></td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('pembayarans.kuitansi', $p->id) }}" target="_blank" class="btn btn-outline-secondary" title="Cetak Kuitansi">
-                                            <i class="bi bi-printer"></i>
-                                        </a>
-                                        <a href="{{ route('pembayarans.show', $p->id) }}" class="btn btn-outline-primary" title="Detail Transaksi">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">Belum ada riwayat transaksi pembayaran.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
-        @if($pembayarans->hasPages())
-            <div class="card-footer bg-transparent py-3">
-                {{ $pembayarans->links() }}
-            </div>
-        @endif
     </div>
 @stop
+
+@push('js')
+<script>
+    $(document).ready(function() {
+        let table = $('#table-pembayaran').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('pembayarans.index', [], false) }}",
+                data: function (d) {
+                    d.unit_id = $('#filter-unit').val();
+                    d.start_date = $('#filter-start-date').val();
+                    d.end_date = $('#filter-end-date').val();
+                    d.metode_bayar = $('#filter-metode').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+                { data: 'kode_transaksi', name: 'kode_transaksi', className: 'font-monospace fw-bold', defaultContent: '-' },
+                { data: 'tgl_format', name: 'tgl_bayar', className: 'text-center', defaultContent: '-' },
+                { data: 'siswa_info', name: 'siswa_info', defaultContent: '-' },
+                { data: 'metode_badge', name: 'metode_bayar', className: 'text-center', defaultContent: '-' },
+                { data: 'total_format', name: 'total_bayar', className: 'text-end', defaultContent: '-' },
+                { data: 'kasir_name', name: 'kasir_name', defaultContent: '-' },
+                { data: 'status_badge', name: 'status', className: 'text-center', defaultContent: '-' },
+                { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+            ],
+            language: {
+                search: "Pencarian:",
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Memuat data pembayaran...',
+                lengthMenu: "Tampilkan _MENU_ transaksi",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ transaksi",
+                infoEmpty: "Menampilkan 0 transaksi",
+                infoFiltered: "(disaring dari _MAX_ data)",
+                paginate: {
+                    first: "Awal",
+                    last: "Akhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        });
+
+        function updateExportLink() {
+            let params = new URLSearchParams();
+            if ($('#filter-unit').val()) params.append('unit_id', $('#filter-unit').val());
+            if ($('#filter-start-date').val()) params.append('start_date', $('#filter-start-date').val());
+            if ($('#filter-end-date').val()) params.append('end_date', $('#filter-end-date').val());
+            if ($('#filter-metode').val()) params.append('metode_bayar', $('#filter-metode').val());
+
+            let base = "{{ route('pembayarans.excel') }}";
+            let fullUrl = params.toString() ? base + '?' + params.toString() : base;
+            $('#btn-export-excel').attr('href', fullUrl);
+        }
+
+        $('#filter-unit, #filter-start-date, #filter-end-date, #filter-metode').on('change', function() {
+            table.draw();
+            updateExportLink();
+        });
+
+        $('#btn-reset-filter').on('click', function() {
+            $('#filter-unit').val('');
+            $('#filter-start-date').val('');
+            $('#filter-end-date').val('');
+            $('#filter-metode').val('');
+            table.draw();
+            updateExportLink();
+        });
+    });
+</script>
+@endpush

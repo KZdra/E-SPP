@@ -5,9 +5,16 @@
 @section('content_header_subtitle', 'Monitoring Matriks 12 Bulan')
 
 @section('content_header_actions')
-    <button onclick="window.print()" class="btn btn-outline-secondary shadow-sm">
-        <i class="bi bi-printer me-1"></i> Cetak Matriks
-    </button>
+    <div class="d-flex gap-2">
+        @if($selectedKelasId && $selectedTaId)
+            <a href="{{ route('reports.matriks-kelas.excel', ['kelas_id' => $selectedKelasId, 'tahun_ajaran_id' => $selectedTaId, 'unit_id' => $unitId]) }}" class="btn btn-success shadow-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel (.xlsx)
+            </a>
+        @endif
+        <button onclick="window.print()" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-printer me-1"></i> Cetak Matriks
+        </button>
+    </div>
 @stop
 
 @section('content_body')

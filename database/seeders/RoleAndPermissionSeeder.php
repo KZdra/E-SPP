@@ -38,7 +38,11 @@ class RoleAndPermissionSeeder extends Seeder
             'tarif.view',
             'tarif.manage',
 
-            // Master Siswa & Kelas (Lokal TU)
+            // Master Siswa, Kelas, Jurusan (Lokal TU)
+            'jurusan.view',
+            'jurusan.create',
+            'jurusan.edit',
+            'jurusan.delete',
             'kelas.view',
             'kelas.create',
             'kelas.edit',
@@ -81,6 +85,7 @@ class RoleAndPermissionSeeder extends Seeder
         $roleKepsek = Role::firstOrCreate(['name' => 'Kepala Sekolah', 'guard_name' => 'web']);
         $roleKepsek->syncPermissions([
             'dashboard.sekolah',
+            'jurusan.view',
             'kelas.view',
             'siswa.view',
             'tahun-ajaran.view',
@@ -97,6 +102,9 @@ class RoleAndPermissionSeeder extends Seeder
         $roleTU = Role::firstOrCreate(['name' => 'Petugas TU', 'guard_name' => 'web']);
         $roleTU->syncPermissions([
             'dashboard.sekolah',
+            'jurusan.view',
+            'jurusan.create',
+            'jurusan.edit',
             'kelas.view',
             'kelas.create',
             'kelas.edit',

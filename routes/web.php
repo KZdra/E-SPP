@@ -9,6 +9,7 @@ use App\Http\Controllers\TarifSppController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\TahunAjaranController;
 use App\Http\Controllers\KelasController;
+use App\Http\Controllers\JurusanController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\TagihanController;
 use App\Http\Controllers\PembayaranController;
@@ -38,13 +39,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     });
 
-    // 3. Master Data Sekolah (Tahun Ajaran, Kelas, Siswa)
+    // 3. Master Data Sekolah (Tahun Ajaran, Jurusan SMK, Kelas, Siswa)
     Route::middleware(['permission:tahun-ajaran.view'])->group(function () {
         Route::resource('tahun-ajarans', TahunAjaranController::class);
         Route::post('tahun-ajarans/{tahunAjaran}/activate', [TahunAjaranController::class, 'activate'])->name('tahun-ajarans.activate');
     });
 
     Route::middleware(['permission:kelas.view'])->group(function () {
+        Route::resource('jurusans', JurusanController::class);
         Route::resource('kelas', KelasController::class);
     });
 
@@ -54,6 +56,7 @@ Route::middleware(['auth'])->group(function () {
 
     // 4. Operasional SPP (Tagihan & Pembayaran Kasir)
     Route::middleware(['permission:tagihan.view'])->group(function () {
+        Route::get('tagihans/export-excel', [TagihanController::class, 'exportExcel'])->name('tagihans.excel');
         Route::get('tagihans', [TagihanController::class, 'index'])->name('tagihans.index');
         Route::get('tagihans/{tagihan}/edit', [TagihanController::class, 'edit'])->name('tagihans.edit');
         Route::put('tagihans/{tagihan}', [TagihanController::class, 'update'])->name('tagihans.update');
@@ -71,6 +74,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::middleware(['permission:pembayaran.view'])->group(function () {
+        Route::get('pembayarans/export-excel', [PembayaranController::class, 'exportExcel'])->name('pembayarans.excel');
         Route::get('pembayarans', [PembayaranController::class, 'index'])->name('pembayarans.index');
         Route::get('pembayarans/{pembayaran}', [PembayaranController::class, 'show'])->name('pembayarans.show');
         Route::get('pembayarans/{pembayaran}/kuitansi', [PembayaranController::class, 'kuitansi'])->name('pembayarans.kuitansi');
@@ -82,14 +86,17 @@ Route::middleware(['auth'])->group(function () {
 
     // 5. Laporan & Monitoring (Kepsek & Yayasan)
     Route::middleware(['permission:laporan.realisasi'])->group(function () {
+        Route::get('reports/realisasi-kas/export-excel', [ReportController::class, 'exportRealisasiKasExcel'])->name('reports.realisasi-kas.excel');
         Route::get('reports/realisasi-kas', [ReportController::class, 'realisasiKas'])->name('reports.realisasi-kas');
     });
 
     Route::middleware(['permission:laporan.tunggakan'])->group(function () {
+        Route::get('reports/tunggakan/export-excel', [ReportController::class, 'exportTunggakanExcel'])->name('reports.tunggakan.excel');
         Route::get('reports/tunggakan', [ReportController::class, 'tunggakan'])->name('reports.tunggakan');
     });
 
     Route::middleware(['permission:laporan.rekapitulasi'])->group(function () {
+        Route::get('reports/matriks-kelas/export-excel', [ReportController::class, 'exportMatriksKelasExcel'])->name('reports.matriks-kelas.excel');
         Route::get('reports/matriks-kelas', [ReportController::class, 'matriksKelas'])->name('reports.matriks-kelas');
     });
 });

@@ -13,7 +13,7 @@ class TarifSppController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = TarifSpp::with(['unitSekolah', 'tahunAjaran', 'kelas']);
+        $query = TarifSpp::with(['unitSekolah', 'tahunAjaran', 'kelas', 'jurusan']);
 
         if (!$user->isYayasan() && $user->unit_sekolah_id) {
             $query->where('unit_sekolah_id', $user->unit_sekolah_id);
@@ -36,8 +36,9 @@ class TarifSppController extends Controller
 
         $tahunAjarans = TahunAjaran::where('is_active', true)->get();
         $kelas = Kelas::orderBy('nama_kelas')->get();
+        $jurusans = \App\Models\Jurusan::orderBy('kode_jurusan')->get();
 
-        return view('tarifs.create', compact('units', 'tahunAjarans', 'kelas'));
+        return view('tarifs.create', compact('units', 'tahunAjarans', 'kelas', 'jurusans'));
     }
 
     public function store(Request $request)
@@ -45,6 +46,7 @@ class TarifSppController extends Controller
         $validated = $request->validate([
             'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
             'tahun_ajaran_id' => 'required|exists:tahun_ajarans,id',
+            'jurusan_id' => 'nullable|exists:jurusans,id',
             'kelas_id' => 'nullable|exists:kelas,id',
             'nominal' => 'required|numeric|min:0',
             'kategori' => 'required|in:reguler,beasiswa,khusus',
@@ -65,8 +67,9 @@ class TarifSppController extends Controller
 
         $tahunAjarans = TahunAjaran::all();
         $kelas = Kelas::where('unit_sekolah_id', $tarif->unit_sekolah_id)->get();
+        $jurusans = \App\Models\Jurusan::where('unit_sekolah_id', $tarif->unit_sekolah_id)->get();
 
-        return view('tarifs.edit', compact('tarif', 'units', 'tahunAjarans', 'kelas'));
+        return view('tarifs.edit', compact('tarif', 'units', 'tahunAjarans', 'kelas', 'jurusans'));
     }
 
     public function update(Request $request, TarifSpp $tarif)
@@ -74,6 +77,7 @@ class TarifSppController extends Controller
         $validated = $request->validate([
             'unit_sekolah_id' => 'required|exists:unit_sekolahs,id',
             'tahun_ajaran_id' => 'required|exists:tahun_ajarans,id',
+            'jurusan_id' => 'nullable|exists:jurusans,id',
             'kelas_id' => 'nullable|exists:kelas,id',
             'nominal' => 'required|numeric|min:0',
             'kategori' => 'required|in:reguler,beasiswa,khusus',

@@ -2,7 +2,7 @@
 
 @section('subtitle', 'Data Siswa')
 @section('content_header_title', 'Master Data Siswa')
-@section('content_header_subtitle', 'Akademik & Kesiswaan')
+@section('content_header_subtitle', 'Akademik & Kesiswaan (Remote Server-Side DataTables)')
 
 @section('content_header_actions')
     @can('siswa.create')
@@ -13,141 +13,131 @@
 @stop
 
 @section('content_body')
-    {{-- Filter & Search Card --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    {{-- Filter Card --}}
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body p-3">
-            <form method="GET" action="{{ route('siswas.index') }}" class="row g-2 align-items-center">
+            <div class="row g-2 align-items-center">
                 @if(auth()->user()->isYayasan())
                     <div class="col-md-3">
-                        <select name="unit_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <label class="form-label small text-muted mb-1 fw-bold">Filter Unit Sekolah:</label>
+                        <select id="filter-unit" class="form-select form-select-sm">
                             <option value="">Semua Unit Sekolah</option>
                             @foreach($units as $u)
-                                <option value="{{ $u->id }}" {{ request('unit_id') == $u->id ? 'selected' : '' }}>
-                                    {{ $u->nama_unit }} ({{ $u->kode_unit }})
-                                </option>
+                                <option value="{{ $u->id }}">{{ $u->nama_unit }} ({{ $u->kode_unit }})</option>
                             @endforeach
                         </select>
                     </div>
                 @endif
                 <div class="col-md-3">
-                    <select name="kelas_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label class="form-label small text-muted mb-1 fw-bold">Filter Kelas:</label>
+                    <select id="filter-kelas" class="form-select form-select-sm">
                         <option value="">Semua Kelas</option>
                         @foreach($kelasList as $k)
-                            <option value="{{ $k->id }}" {{ request('kelas_id') == $k->id ? 'selected' : '' }}>
-                                Kelas {{ $k->nama_kelas }}
-                            </option>
+                            <option value="{{ $k->id }}">Kelas {{ $k->nama_kelas }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1 fw-bold">Status Siswa:</label>
+                    <select id="filter-status" class="form-select form-select-sm">
                         <option value="">Semua Status</option>
-                        <option value="aktif" {{ request('status') == 'aktif' ? 'selected' : '' }}>Aktif</option>
-                        <option value="lulus" {{ request('status') == 'lulus' ? 'selected' : '' }}>Lulus</option>
-                        <option value="pindah" {{ request('status') == 'pindah' ? 'selected' : '' }}>Pindah</option>
+                        <option value="aktif">Aktif</option>
+                        <option value="lulus">Lulus</option>
+                        <option value="pindah">Pindah</option>
                     </select>
                 </div>
-                <div class="col-md-4 ms-auto">
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control" placeholder="Cari nama, NIS, atau NISN..." value="{{ request('search') }}">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Cari</button>
-                        @if(request()->hasAny(['unit_id', 'kelas_id', 'status', 'search']))
-                            <a href="{{ route('siswas.index') }}" class="btn btn-outline-danger" title="Reset Filter"><i class="bi bi-x-lg"></i></a>
-                        @endif
-                    </div>
+                <div class="col-md-3 text-end d-flex align-items-end justify-content-end">
+                    <button type="button" id="btn-reset-filter" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    {{-- Students Table --}}
+    {{-- Remote Server-Side DataTable --}}
     <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table id="table-siswa" class="table table-hover table-striped align-middle w-100">
                     <thead class="table-light">
                         <tr class="small text-muted text-uppercase">
+                            <th class="text-center" width="5%">No</th>
                             <th>NIS / NISN</th>
                             <th>Nama Siswa</th>
-                            <th>Unit & Kelas</th>
-                            <th>L/P</th>
+                            <th>Unit Sekolah</th>
+                            <th>Kelas & Jurusan</th>
+                            <th class="text-center">L/P</th>
                             <th>Wali Murid</th>
-                            <th>Status</th>
-                            <th class="text-center">Aksi</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center" width="12%">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($siswas as $s)
-                            <tr>
-                                <td>
-                                    <span class="fw-bold font-monospace text-primary">{{ $s->nis }}</span>
-                                    <small class="d-block text-muted">NISN: {{ $s->nisn ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ $s->nama }}</div>
-                                    <small class="text-muted"><i class="bi bi-telephone"></i> {{ $s->telepon_wali ?? '-' }}</small>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary-subtle text-primary border me-1">{{ $s->unitSekolah->kode_unit ?? '-' }}</span>
-                                    <span class="badge bg-secondary-subtle text-secondary border">Kelas {{ $s->kelas->nama_kelas ?? '-' }}</span>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $s->jenis_kelamin === 'L' ? 'bg-primary' : 'bg-danger' }}">
-                                        {{ $s->jenis_kelamin }}
-                                    </span>
-                                </td>
-                                <td>{{ $s->nama_wali ?? '-' }}</td>
-                                <td>
-                                    @php
-                                        $badgeStatus = match($s->status) {
-                                            'aktif' => 'bg-success',
-                                            'lulus' => 'bg-info text-white',
-                                            'pindah' => 'bg-warning text-dark',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeStatus }} text-capitalize">{{ $s->status }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('siswas.show', $s->id) }}" class="btn btn-outline-info" title="Detail Profil & Tagihan">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        @can('pembayaran.create')
-                                            <a href="{{ route('pembayarans.create', ['siswa_id' => $s->id]) }}" class="btn btn-outline-success" title="Bayar SPP Langsung">
-                                                <i class="bi bi-credit-card-2-front"></i>
-                                            </a>
-                                        @endcan
-                                        @can('siswa.edit')
-                                            <a href="{{ route('siswas.edit', $s->id) }}" class="btn btn-outline-warning" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                        @endcan
-                                        @can('siswa.delete')
-                                            <form action="{{ route('siswas.destroy', $s->id) }}" method="POST" onsubmit="return confirm('Hapus siswa ini (Soft Delete)?');" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger" title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Data siswa tidak ditemukan.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
-        @if($siswas->hasPages())
-            <div class="card-footer bg-transparent py-3">
-                {{ $siswas->links() }}
-            </div>
-        @endif
     </div>
 @stop
+
+@push('js')
+<script>
+    $(document).ready(function() {
+        let table = $('#table-siswa').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('siswas.index', [], false) }}",
+                data: function (d) {
+                    d.unit_id = $('#filter-unit').val();
+                    d.kelas_id = $('#filter-kelas').val();
+                    d.status = $('#filter-status').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+                { data: 'nis', name: 'nis', defaultContent: '-' },
+                { data: 'nama', name: 'nama', defaultContent: '-' },
+                { data: 'unit_name', name: 'unit_name', defaultContent: '-' },
+                { data: 'kelas_name', name: 'kelas_name', defaultContent: '-' },
+                { data: 'jenis_kelamin', name: 'jenis_kelamin', className: 'text-center', defaultContent: '-' },
+                { data: 'nama_wali', name: 'nama_wali', defaultContent: '-' },
+                { data: 'status_badge', name: 'status', className: 'text-center', defaultContent: '-' },
+                { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center', defaultContent: '-' },
+            ],
+            language: {
+                search: "Pencarian:",
+                processing: '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Memuat data dari server...',
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data siswa",
+                infoEmpty: "Menampilkan 0 data",
+                infoFiltered: "(disaring dari _MAX_ data)",
+                paginate: {
+                    first: "Awal",
+                    last: "Akhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        });
+
+        $('#filter-unit, #filter-kelas, #filter-status').on('change', function() {
+            table.draw();
+        });
+
+        $('#btn-reset-filter').on('click', function() {
+            $('#filter-unit').val('');
+            $('#filter-kelas').val('');
+            $('#filter-status').val('');
+            table.draw();
+        });
+    });
+</script>
+@endpush

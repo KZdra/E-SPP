@@ -19,6 +19,7 @@ class TarifSpp extends Model
     protected $fillable = [
         'unit_sekolah_id',
         'tahun_ajaran_id',
+        'jurusan_id',
         'kelas_id',
         'nominal',
         'kategori',
@@ -40,6 +41,11 @@ class TarifSpp extends Model
     public function tahunAjaran(): BelongsTo
     {
         return $this->belongsTo(TahunAjaran::class, 'tahun_ajaran_id');
+    }
+
+    public function jurusan(): BelongsTo
+    {
+        return $this->belongsTo(Jurusan::class, 'jurusan_id');
     }
 
     public function kelas(): BelongsTo

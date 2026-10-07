@@ -98,6 +98,7 @@ class ReportService
 
         return [
             'data' => $rekapPerSiswa,
+            'tagihans' => $tagihans,
             'total_nominal' => $rekapPerSiswa->sum('total_tunggakan'),
             'total_siswa_tertunggak' => $rekapPerSiswa->count(),
             'total_tagihan_tertunggak' => $tagihans->count(),
